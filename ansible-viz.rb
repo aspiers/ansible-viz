@@ -41,9 +41,10 @@ end
 
 ########## LOAD DATA #############
 
-def load_data(playbook_dir)
+def load_data(options)
   dict = {}
 
+  playbook_dir = options.playbook_dir
   rolesdir = File.join(playbook_dir, "roles")
   Dir.new(rolesdir).find_all { |file|
     File.directory?(File.join(rolesdir, file)) and file !~ /^\./
@@ -89,6 +90,7 @@ def mk_role(dict, roledir, name)
     if !File.directory? roledir
       raise "Missing roledir: "+ roledir
     end
+
     taskdir = File.join(roledir, "tasks")
     if File.directory? taskdir
       role[:tasks] = Dir.new(taskdir).
@@ -96,6 +98,17 @@ def mk_role(dict, roledir, name)
         reject {|n| n =~ /^_|^main.yml$/ }.
         map {|n| File.join(taskdir, n) }.
         map {|p| mk_task(dict, taskdir, p) }.
+        uniq  # FIXME
+    end
+
+    vardir = File.join(roledir, "vars")
+    if File.directory? vardir
+      role[:vars] = Dir.new(vardir).
+        find_all {|f| f =~ /.yml$/ }.
+        reject {|n| n =~ /^_|^main.yml$/ }.
+        map {|n| File.join(vardir, n) }.
+        map {|p| mk_var(dict, vardir, p) }.
+        flatten.
         uniq  # FIXME
     end
 
@@ -122,18 +135,35 @@ def mk_task(dict, basedir, filename)
   end
 end
 
+def mk_var(dict, basedir, filename)
+  filename =~ %r!roles/([[:alnum:]_-]+)!
+  rolename = $1
+  vardata = nil
+  File.open(filename) {|fd|
+    vardata = YAML.load(fd)
+  }
+  vardata.keys.map {|key|
+    long = rolename + " / " + key
+    thing(dict, :var, long, {:role => $1, :label => key})
+  }
+end
+
 
 ########## GRAPHIFY ###########
 
-def graphify(dict)
+def graphify(dict, options)
   g = Graph.new
   g[:rankdir] = 'LR'
   g[:tooltip] = ' '
 
   # Add nodes for each thing
-  [[:playbook, {:shape => 'folder'}],
-   [:role, {:shape => 'house'}],
-   [:task, {:shape => 'oval'}]].each {|type, attrs|
+  types = [[:playbook, {:shape => 'folder'}],
+          [:role, {:shape => 'house'}],
+          [:task, {:shape => 'oval'}]]
+  if options.show_vars
+    types.push [:var, {:shape => 'octagon'}]
+  end
+  types.each {|type, attrs|
     dict[type].each_pair {|name, it|
       node = g.get_or_make(name)
       it[:node] = node
@@ -162,18 +192,26 @@ def graphify(dict)
     end
   }
 
-  # Add edges from roles to other roles and tasks
+  # Add edges from roles to other things
   dict[:role].each_value {|role|
     with_context dict, role do
-      (role[:tasks] || []).each {|task|
-        g.add GEdge[role[:node], task[:node],
-          {:tooltip => "calls task"}]
-      }
       (role[:role_deps] || []).each {|dep|
         g.add GEdge[role[:node], dep[:node],
           {:color => 'hotpink',
            :tooltip => "calls foreign task"}]
       }
+
+      (role[:tasks] || []).each {|task|
+        g.add GEdge[role[:node], task[:node],
+          {:tooltip => "calls task"}]
+      }
+
+      if options.show_vars
+        (role[:vars] || []).each {|var|
+          g.add GEdge[role[:node], var[:node],
+            {:tooltip => "provides var"}]
+        }
+      end
     end
   }
 
@@ -232,10 +270,14 @@ end
 options = OpenStruct.new
 options.format = :hot
 options.output_filename = "viz.html"
+options.show_vars = false
 OptionParser.new do |o|
   o.banner = "Usage: ansible-viz.rb [options] <path-to-playbooks>"
   o.on("-o", "--output [FILE]", "Where to write output") do |fname|
     options.output_filename = fname
+  end
+  o.on("--vars", "Include vars") do |val|
+    options.show_vars = true
   end
   o.on_tail("-h", "--help", "Show this message") do
     puts o
@@ -251,6 +293,6 @@ if !File.directory? options.playbook_dir
   raise "Not a dir: #{options.playbook_dir}"
 end
 
-dict = load_data(options.playbook_dir)
-graph = decorate(graphify(dict))
+dict = load_data(options)
+graph = decorate(graphify(dict, options))
 write(graph, options.output_filename)
