@@ -81,15 +81,17 @@ def mk_role(dict, path, name)
     taskdir = File.join(path, name, "tasks")
     role[:tasks] = ls(taskdir, []).
       find_all {|f| f =~ /\.yml$/ }.
-      reject {|f| f =~ /^_|^main\.yml$/ }.
       map {|f| mk_task(dict, taskdir, f) }.
       uniq  # FIXME
+
+    used_vars = role[:tasks].flat_map {|task| task[:used_vars] }.uniq
 
     vardir = File.join(path, name, "vars")
     role[:vars] = ls(vardir, []).
       find_all {|f| f =~ /\.yml$/ }.
       flat_map {|f| mk_vars(dict, vardir, f) }.
       uniq  # FIXME
+    role[:unused_vars] = role[:vars].reject {|i| used_vars.include? i[:label] }
 
     begin
       meta = yaml_slurp(path, name, "meta", "main.yml")
@@ -110,10 +112,35 @@ def mk_task(dict, path, file)
   role = $1
   task = thing(dict, :task, role + " / " + name, {:role => role, :label => name})
 
-  taskdata = yaml_slurp(path, file)
+  task[:used_vars] = find_vars(yaml_slurp(path, file))
 
   task
 end
+
+def find_vars(data)
+  # This is the best I can do with regexen, really needs a proper parser
+  if data.instance_of? Hash
+    data.values.flat_map {|i| find_vars(i) }
+  elsif data.is_a? Enumerable
+    data.flat_map {|i| find_vars(i) }
+  else
+    rej = ["join", "int", "item", "dirname", "basename", "regex_replace"]
+    data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
+      flat_map {|s| s.split("|") }.
+      map {|s| s.split(".")[0] }.
+      map {|s| s.split("[")[0] }.
+      map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
+      map {|s| s.strip }.
+      reject {|s| rej.include? s }
+  end
+end
+
+#pp find_vars("abc {{def}} ghi")
+#pp find_vars(["{{1}}", "{{2}}"])
+#pp find_vars({:a => "{{1}}", :b => "{{2}}"})
+#pp find_vars({:a => ["{{1}}", "{{2}}"], :b => "{{3}}"})
+#pp find_vars("{{1|up(2)}}")
+#1/0
 
 def mk_vars(dict, path, file)
   if !File.file? File.join(path, file) then
@@ -156,6 +183,12 @@ end
 ########## GRAPHIFY ###########
 
 def graphify(dict, options)
+  # FIXME All the cosmetic stuff should be factored out to decorate methods really
+
+  def hide_node(it)
+    it[:type] == :task and it[:label] =~ /^_|^main$/
+  end
+
   g = Graph.new
   g[:rankdir] = 'LR'
   g[:tooltip] = ' '
@@ -169,6 +202,9 @@ def graphify(dict, options)
   end
   types.each {|type, attrs|
     dict[type].each_pair {|name, it|
+      if hide_node(it)
+        next
+      end
       node = g.get_or_make(name)
       node[:style] = 'filled'
       it[:node] = node
@@ -206,7 +242,8 @@ def graphify(dict, options)
            :tooltip => "calls foreign task"}]
       }
 
-      (role[:tasks] || []).each {|task|
+      (role[:tasks] || []).reject {|t| hide_node(t) }.
+          each {|task|
         g.add GEdge[role[:node], task[:node],
           {:tooltip => "calls task"}]
       }
@@ -220,7 +257,7 @@ def graphify(dict, options)
     end
   }
 
-  g
+  decorate(g, dict, options)
 end
 
 
@@ -235,14 +272,31 @@ def rank_node(node)
   end
 end
 
-def decorate(g)
-  g.nodes.each {|n|
-    if n[:shape] == 'house' and n.inc_nodes.empty?
+def decorate(g, dict, options)
+  decorate_nodes(g, dict, options)
+
+  dict[:role].values.map {|r| r[:node] }.each {|n|
+    if n.inc_nodes.empty?
       n[:fillcolor] = 'yellowgreen'
       n[:tooltip] = 'not used by any playbook'
     end
   }
+
+  if options.show_vars
+    dict[:role].values.each {|r|
+      r[:node][:tooltip] = r[:unused_vars].map {|v| v[:label] }.join(" ")
+    }
+    dict[:role].values.flat_map {|r| r[:unused_vars] }.
+        map {|v| v[:node] }.
+        each {|n|
+      n[:fillcolor] = 'red'
+      n[:tooltip] = '(EXPERIMENTAL) appears not to be used by any task in the owning role'
+    }
+  end
   g
+end
+
+def decorate_nodes(g, dict, options)
 end
 
 ########## RENDER #############
@@ -287,5 +341,5 @@ end
 options.playbook_dir = ARGV.shift
 
 dict = load_data(options)
-graph = decorate(graphify(dict, options))
+graph = graphify(dict, options)
 write(graph, options.output_filename)
