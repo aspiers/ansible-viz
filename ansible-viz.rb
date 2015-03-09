@@ -31,43 +31,108 @@ def with_context(dict, it)
     yield it
   rescue
     puts "Context:"
-    dict[:context].each {|i| puts "  " + i.to_s}
+    dict[:context].each {|i| puts "  " + i[:type].to_s + ": " + i[:name]}
     raise
   end
 ensure
   dict[:context].pop
 end
 
+def ls(path, default=nil)
+  if !File.directory? path
+    if default == nil
+      raise "No such directory: " + path
+    end
+    return default
+  end
+  Dir.new(path).reject {|f| f =~ /^\./ }
+end
+
+def yaml_slurp(*steps)
+  filepath = File.join(*steps)
+  File.open(filepath) {|fd|
+    return YAML.load(fd)
+  }
+end
 
 ########## LOAD DATA #############
 
 def load_data(options)
   dict = {}
 
+  # Load all roles first, before playbooks.
+  # This will also bring in tasks and vars.
   playbook_dir = options.playbook_dir
   rolesdir = File.join(playbook_dir, "roles")
-  Dir.new(rolesdir).find_all { |file|
-    File.directory?(File.join(rolesdir, file)) and file !~ /^\./
-  }.map {|name|
-    mk_role(dict, File.join(rolesdir, name), name)
-  }
+  ls(rolesdir).find_all { |file| File.directory?(File.join(rolesdir, file)) }.
+      map {|file| mk_role(dict, rolesdir, file) }
 
-  Dir.new(playbook_dir).find_all { |file|
+  # Load playbooks
+  ls(playbook_dir).find_all { |file|
     /.yml$/i === file.downcase
-  }.inject({}) { |map, file|
-    File.open(File.join(playbook_dir, file)) { |fd|
-      map[file.sub(/.yml$/, '')] = YAML.load(fd)
-    }
-    map
-  }.map { |name, data|
-    mk_playbook(dict, playbook_dir, name, data)
-  }
+  }.map { |file| mk_playbook(dict, playbook_dir, file) }
 
   dict
 end
 
-def mk_playbook(dict, basedir, name, data)
+def mk_role(dict, path, name)
+  role = thing(dict, :role, name)
+  with_context dict, role do
+    taskdir = File.join(path, name, "tasks")
+    role[:tasks] = ls(taskdir, []).
+      find_all {|f| f =~ /\.yml$/ }.
+      reject {|f| f =~ /^_|^main\.yml$/ }.
+      map {|f| mk_task(dict, taskdir, f) }.
+      uniq  # FIXME
+
+    vardir = File.join(path, name, "vars")
+    role[:vars] = ls(vardir, []).
+      find_all {|f| f =~ /\.yml$/ }.
+      flat_map {|f| mk_vars(dict, vardir, f) }.
+      uniq  # FIXME
+
+    begin
+      meta = yaml_slurp(path, name, "meta", "main.yml")
+      role[:role_deps] = (meta['dependencies'] || []).
+        map {|dep| dep['role'] }.
+        map {|dep| thing(dict, :role, dep) }
+    rescue Errno::ENOENT
+    end
+  end
+  role
+end
+
+def mk_task(dict, path, file)
+  name = file.sub(/.yml$/, '')
+  if path !~ %r!roles/([[:alnum:]_-]+)!
+    raise "Bad task path: "+ path
+  end
+  role = $1
+  task = thing(dict, :task, role + " / " + name, {:role => role, :label => name})
+
+  taskdata = yaml_slurp(path, file)
+
+  task
+end
+
+def mk_vars(dict, path, file)
+  if !File.file? File.join(path, file) then
+    return []
+  end
+
+  vardata = yaml_slurp(path, file)
+  path =~ %r!roles/([[:alnum:]_-]+)!
+  rolename = $1
+  (vardata || {}).keys.map {|key|
+    long = rolename + " / " + key
+    thing(dict, :var, long, {:role => $1, :label => key})
+  }
+end
+
+def mk_playbook(dict, path, file)
+  name = file.sub(/.yml$/, '')
   playbook = thing(dict, :playbook, name)
+  data = yaml_slurp(path, file)
   with_context dict, playbook do
     playbook[:roles] = (data[0]['roles'] || []).map {|role|
       if role.instance_of? Hash
@@ -78,78 +143,13 @@ def mk_playbook(dict, basedir, name, data)
     }.uniq  # FIXME
 
     playbook[:tasks] = (data[0]['tasks'] || []).map {|task_h|
-      mk_task(dict, basedir, task_h['include'])
+      rel_path = task_h['include'].split(" ")[0]
+      file = File.basename(rel_path)
+      taskdir = File.dirname(File.join(path, rel_path))
+      mk_task(dict, taskdir, file)
     }.compact.uniq  # FIXME
   end
   playbook
-end
-
-def mk_role(dict, roledir, name)
-  role = thing(dict, :role, name)
-  with_context dict, role do
-    if !File.directory? roledir
-      raise "Missing roledir: "+ roledir
-    end
-
-    taskdir = File.join(roledir, "tasks")
-    if File.directory? taskdir
-      role[:tasks] = Dir.new(taskdir).
-        find_all {|f| f =~ /.yml$/ }.
-        reject {|n| n =~ /^_|^main.yml$/ }.
-        map {|n| File.join(taskdir, n) }.
-        map {|p| mk_task(dict, taskdir, p) }.
-        uniq  # FIXME
-    end
-
-    vardir = File.join(roledir, "vars")
-    if File.directory? vardir
-      role[:vars] = Dir.new(vardir).
-        find_all {|f| f =~ /.yml$/ }.
-        map {|n| File.join(vardir, n) }.
-        map {|p| mk_var(dict, vardir, p) }.
-        flatten.
-        uniq  # FIXME
-    end
-
-    metafile = File.join(roledir, "meta", "main.yml")
-    if File.file? metafile
-      meta = nil
-      File.open(metafile) {|fd|
-        meta = YAML.load(fd)
-      }
-      role[:role_deps] = (meta['dependencies'] || []).
-        map {|dep| dep['role'] }.
-        map {|dep| thing(dict, :role, dep) }
-    end
-  end
-  role
-end
-
-def mk_task(dict, basedir, filename)
-  if filename =~ %r!roles/([[:alnum:]_-]+)/tasks/([[:alnum:]_-]+).yml!
-    long = $1 + " / " + $2
-    thing(dict, :task, long, {:role => $1, :label => $2})
-  else
-    raise "Bad task: "+ filename
-  end
-end
-
-def mk_var(dict, basedir, filename)
-  if !File.file? filename then
-    return []
-  end
-
-  vardata = nil
-  File.open(filename) {|fd|
-    vardata = YAML.load(fd)
-  }
-
-  filename =~ %r!roles/([[:alnum:]_-]+)!
-  rolename = $1
-  (vardata || {}).keys.map {|key|
-    long = rolename + " / " + key
-    thing(dict, :var, long, {:role => $1, :label => key})
-  }
 end
 
 
@@ -161,15 +161,16 @@ def graphify(dict, options)
   g[:tooltip] = ' '
 
   # Add nodes for each thing
-  types = [[:playbook, {:shape => 'folder'}],
-           [:role, {:shape => 'house'}],
-           [:task, {:shape => 'oval'}]]
+  types = [[:playbook, {:shape => 'folder', :fillcolor => 'cornflowerblue'}],
+           [:role, {:shape => 'house', :fillcolor => 'palegreen'}],
+           [:task, {:shape => 'oval', :fillcolor => 'white'}]]
   if options.show_vars
-    types.push [:var, {:shape => 'octagon'}]
+    types.push [:var, {:shape => 'octagon', :fillcolor => 'cornsilk'}]
   end
   types.each {|type, attrs|
     dict[type].each_pair {|name, it|
       node = g.get_or_make(name)
+      node[:style] = 'filled'
       it[:node] = node
       attrs.each_pair {|k,v| node[k] = v }
       if it[:label]
@@ -237,8 +238,8 @@ end
 def decorate(g)
   g.nodes.each {|n|
     if n[:shape] == 'house' and n.inc_nodes.empty?
-      n[:style] = 'filled'
-      n[:fillcolor] = 'red'
+      n[:fillcolor] = 'yellowgreen'
+      n[:tooltip] = 'not used by any playbook'
     end
   }
   g
@@ -257,15 +258,6 @@ def write(graph, filename)
   path = filename
   File.open(path, 'w') do |f|
     f.puts view.render
-  end
-end
-
-def en_join(a)
-  case a.count
-  when 0 then "none"
-  when 1 then a.first
-  else
-    a.slice(0, a.count-1).join(", ") +" and #{a.last}"
   end
 end
 
@@ -293,10 +285,6 @@ if ARGV.length != 1
   abort("Must provide the path to your playbooks")
 end
 options.playbook_dir = ARGV.shift
-
-if !File.directory? options.playbook_dir
-  raise "Not a dir: #{options.playbook_dir}"
-end
 
 dict = load_data(options)
 graph = decorate(graphify(dict, options))
