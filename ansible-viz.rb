@@ -75,6 +75,7 @@ def mk_playbook(dict, basedir, name, data)
       # All roles should be loaded already
       dict[:role][role]
     }.uniq  # FIXME
+
     playbook[:tasks] = (data[0]['tasks'] || []).map {|task_h|
       mk_task(dict, basedir, task_h['include'])
     }.compact.uniq  # FIXME
@@ -83,7 +84,7 @@ def mk_playbook(dict, basedir, name, data)
 end
 
 def mk_role(dict, roledir, name)
-  role = thing(dict, :role, name, {:dep => false})
+  role = thing(dict, :role, name)
   with_context dict, role do
     if !File.directory? roledir
       raise "Missing roledir: "+ roledir
@@ -107,11 +108,6 @@ def mk_role(dict, roledir, name)
       role[:role_deps] = (meta['dependencies'] || []).
         map {|dep| dep['role'] }.
         map {|dep| thing(dict, :role, dep) }
-      role[:role_deps].each {|dep|
-        if dep[:dep] == nil
-          dep[:dep] = true
-        end
-      }
     end
   end
   role
@@ -134,8 +130,9 @@ def graphify(dict)
   g[:rankdir] = 'LR'
   g[:tooltip] = ' '
 
+  # Add nodes for each thing
   [[:playbook, {:shape => 'folder'}],
-   [:role, {:shape => 'octagon'}],
+   [:role, {:shape => 'house'}],
    [:task, {:shape => 'oval'}]].each {|type, attrs|
     dict[type].each_pair {|name, it|
       node = g.get_or_make(name)
@@ -149,6 +146,8 @@ def graphify(dict)
       end
     }
   }
+
+  # Add edges from playbooks to roles and tasks
   dict[:playbook].each_value {|playbook|
     with_context dict, playbook do
       (playbook[:roles] || []).each {|role|
@@ -162,6 +161,8 @@ def graphify(dict)
       }
     end
   }
+
+  # Add edges from roles to other roles and tasks
   dict[:role].each_value {|role|
     with_context dict, role do
       (role[:tasks] || []).each {|task|
@@ -174,11 +175,6 @@ def graphify(dict)
            :tooltip => "calls foreign task"}]
       }
     end
-  }
-  dict[:role].values.find_all {|role| role[:dep] }.
-      each {|role|
-    role[:node][:style] = 'filled'
-    role[:node][:fillcolor] = 'plum'
   }
 
   g
@@ -197,7 +193,7 @@ end
 
 def decorate(g)
   g.nodes.each {|n|
-    if n[:shape] == 'octagon' and n.inc_nodes.empty?
+    if n[:shape] == 'house' and n.inc_nodes.empty?
       n[:style] = 'filled'
       n[:fillcolor] = 'red'
     end
