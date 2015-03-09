@@ -105,7 +105,6 @@ def mk_role(dict, roledir, name)
     if File.directory? vardir
       role[:vars] = Dir.new(vardir).
         find_all {|f| f =~ /.yml$/ }.
-        reject {|n| n =~ /^_|^main.yml$/ }.
         map {|n| File.join(vardir, n) }.
         map {|p| mk_var(dict, vardir, p) }.
         flatten.
@@ -136,13 +135,18 @@ def mk_task(dict, basedir, filename)
 end
 
 def mk_var(dict, basedir, filename)
-  filename =~ %r!roles/([[:alnum:]_-]+)!
-  rolename = $1
+  if !File.file? filename then
+    return []
+  end
+
   vardata = nil
   File.open(filename) {|fd|
     vardata = YAML.load(fd)
   }
-  vardata.keys.map {|key|
+
+  filename =~ %r!roles/([[:alnum:]_-]+)!
+  rolename = $1
+  (vardata || {}).keys.map {|key|
     long = rolename + " / " + key
     thing(dict, :var, long, {:role => $1, :label => key})
   }
@@ -158,8 +162,8 @@ def graphify(dict, options)
 
   # Add nodes for each thing
   types = [[:playbook, {:shape => 'folder'}],
-          [:role, {:shape => 'house'}],
-          [:task, {:shape => 'oval'}]]
+           [:role, {:shape => 'house'}],
+           [:task, {:shape => 'oval'}]]
   if options.show_vars
     types.push [:var, {:shape => 'octagon'}]
   end
@@ -225,7 +229,8 @@ end
 def rank_node(node)
   case node[:shape]
   when /folder/ then :source
-  when /oval/ then :sink
+  when /oval/ then :same
+  when /octagon/ then :sink
   end
 end
 
