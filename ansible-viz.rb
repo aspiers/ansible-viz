@@ -78,6 +78,13 @@ end
 def mk_role(dict, path, name)
   role = thing(dict, :role, name)
   with_context dict, role do
+    # Load vars before tasks, so they're available in dict
+    vardir = File.join(path, name, "vars")
+    role[:vars] = ls(vardir, []).
+      find_all {|f| f =~ /\.yml$/ }.
+      flat_map {|f| mk_vars(dict, vardir, f) }.
+      uniq  # FIXME
+
     taskdir = File.join(path, name, "tasks")
     role[:tasks] = ls(taskdir, []).
       find_all {|f| f =~ /\.yml$/ }.
@@ -85,13 +92,7 @@ def mk_role(dict, path, name)
       uniq  # FIXME
 
     used_vars = role[:tasks].flat_map {|task| task[:used_vars] }.uniq
-
-    vardir = File.join(path, name, "vars")
-    role[:vars] = ls(vardir, []).
-      find_all {|f| f =~ /\.yml$/ }.
-      flat_map {|f| mk_vars(dict, vardir, f) }.
-      uniq  # FIXME
-    role[:unused_vars] = role[:vars].reject {|i| used_vars.include? i[:label] }
+    role[:unused_vars] = role[:vars].reject {|i| used_vars.include? i }
 
     begin
       meta = yaml_slurp(path, name, "meta", "main.yml")
@@ -109,29 +110,41 @@ def mk_task(dict, path, file)
   if path !~ %r!roles/([[:alnum:]_-]+)!
     raise "Bad task path: "+ path
   end
-  role = $1
-  task = thing(dict, :task, role + " / " + name, {:role => role, :label => name})
+  rolename = $1
+  long = "Task " + rolename + "::" + name
+  task = thing(dict, :task, long, {:role => rolename, :label => name})
 
-  task[:used_vars] = find_vars(yaml_slurp(path, file))
+  task[:used_vars] = find_vars(yaml_slurp(path, file)).map {|varname|
+    mk_var(dict, rolename, varname)
+  }.uniq
 
   task
 end
 
 def find_vars(data)
-  # This is the best I can do with regexen, really needs a proper parser
   if data.instance_of? Hash
     data.values.flat_map {|i| find_vars(i) }
   elsif data.is_a? Enumerable
     data.flat_map {|i| find_vars(i) }
   else
-    rej = ["join", "int", "item", "dirname", "basename", "regex_replace"]
+    # This really needs a proper parser
+    fns = ["join", "int", "item", "dirname", "basename", "regex_replace"]
     data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
+      map {|s|
+        os = nil
+        while os != s
+          os = s
+          s = s.gsub(/\w+\((.*?)\)/, '\1')
+        end
+        s
+      }.
       flat_map {|s| s.split("|") }.
       map {|s| s.split(".")[0] }.
       map {|s| s.split("[")[0] }.
       map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
       map {|s| s.strip }.
-      reject {|s| rej.include? s }
+      reject {|s| fns.include? s }.
+      reject {|s| s.empty? }
   end
 end
 
@@ -140,6 +153,7 @@ end
 #pp find_vars({:a => "{{1}}", :b => "{{2}}"})
 #pp find_vars({:a => ["{{1}}", "{{2}}"], :b => "{{3}}"})
 #pp find_vars("{{1|up(2)}}")
+#pp find_vars("{{ccache | update(ccache_update | default({}))}}")
 #1/0
 
 def mk_vars(dict, path, file)
@@ -151,9 +165,13 @@ def mk_vars(dict, path, file)
   path =~ %r!roles/([[:alnum:]_-]+)!
   rolename = $1
   (vardata || {}).keys.map {|key|
-    long = rolename + " / " + key
-    thing(dict, :var, long, {:role => $1, :label => key})
+    mk_var(dict, rolename, key)
   }
+end
+
+def mk_var(dict, rolename, name)
+  long = "Var " + rolename + "::" + name
+  thing(dict, :var, long, {:role => $1, :label => name})
 end
 
 def mk_playbook(dict, path, file)
@@ -185,10 +203,6 @@ end
 def graphify(dict, options)
   # FIXME All the cosmetic stuff should be factored out to decorate methods really
 
-  def hide_node(it)
-    it[:type] == :task and it[:label] =~ /^_|^main$/
-  end
-
   g = Graph.new
   g[:rankdir] = 'LR'
   g[:tooltip] = ' '
@@ -196,15 +210,10 @@ def graphify(dict, options)
   # Add nodes for each thing
   types = [[:playbook, {:shape => 'folder', :fillcolor => 'cornflowerblue'}],
            [:role, {:shape => 'house', :fillcolor => 'palegreen'}],
-           [:task, {:shape => 'oval', :fillcolor => 'white'}]]
-  if options.show_vars
-    types.push [:var, {:shape => 'octagon', :fillcolor => 'cornsilk'}]
-  end
+           [:task, {:shape => 'oval', :fillcolor => 'white'}],
+           [:var, {:shape => 'octagon', :fillcolor => 'cornsilk'}]]
   types.each {|type, attrs|
     dict[type].each_pair {|name, it|
-      if hide_node(it)
-        next
-      end
       node = g.get_or_make(name)
       node[:style] = 'filled'
       it[:node] = node
@@ -213,7 +222,7 @@ def graphify(dict, options)
         node[:label] = it[:label]
         node[:tooltip] = it[:name]
       else
-        node[:tooltip] = ' '
+        node[:tooltip] = type.to_s.capitalize
       end
     }
   }
@@ -242,20 +251,40 @@ def graphify(dict, options)
            :tooltip => "calls foreign task"}]
       }
 
-      (role[:tasks] || []).reject {|t| hide_node(t) }.
-          each {|task|
+      (role[:tasks] || []).each {|task|
         g.add GEdge[role[:node], task[:node],
           {:tooltip => "calls task"}]
       }
 
-      if options.show_vars
-        (role[:vars] || []).each {|var|
-          g.add GEdge[role[:node], var[:node],
-            {:tooltip => "provides var"}]
-        }
-      end
+      (role[:vars] || []).each {|var|
+        g.add GEdge[role[:node], var[:node],
+          {:tooltip => "provides var"}]
+      }
     end
   }
+
+  # Add edges from tasks to vars
+  dict[:task].each_value {|task|
+    if task[:node] == nil
+      next
+    end
+    with_context dict, task do
+      (task[:used_vars] || []).each {|var|
+        g.add GEdge[task[:node], var[:node],
+          {:style => 'dotted',
+           :tooltip => "uses var"}]
+      }
+    end
+    }
+
+  hide_tasks = dict[:task].each_value.find_all {|it|
+    it[:label] =~ /^_|^main$/
+  }.map {|it| it[:node] }
+  g.lowercut(*hide_tasks)
+
+  if not options.show_vars
+    g.cut(*(dict[:var].values.map {|it| it[:node] }))
+  end
 
   decorate(g, dict, options)
 end
@@ -283,13 +312,13 @@ def decorate(g, dict, options)
   }
 
   if options.show_vars
-    dict[:role].values.each {|r|
-      r[:node][:tooltip] = r[:unused_vars].map {|v| v[:label] }.join(" ")
-    }
+#    dict[:role].values.each {|r|
+#      r[:node][:tooltip] = r[:unused_vars].map {|v| v[:label] }.join(" ")
+#    }
     dict[:role].values.flat_map {|r| r[:unused_vars] }.
         map {|v| v[:node] }.
         each {|n|
-      n[:fillcolor] = 'red'
+      n[:fillcolor] = 'yellow'
       n[:tooltip] = '(EXPERIMENTAL) appears not to be used by any task in the owning role'
     }
   end
