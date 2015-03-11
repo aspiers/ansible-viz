@@ -10,10 +10,10 @@ class Postprocessor
   def postprocess(dict)
     dict[:role].each_value {|role| do_role_1(dict, role) }
     todo = dict[:role].values
-    while length(todo) > 0
-      role = todo.unshift
+    while todo.length > 0
+      role = todo.shift
       if role[:role_deps].all? {|dep| dep[:loaded] }
-        do_role_2(dict, todo[0])
+        do_role_2(dict, role)
       else
         todo.push role
       end
@@ -30,35 +30,43 @@ class Postprocessor
       dep
     }
 
+    role[:task] ||= {}
+    role[:var] ||= {}
     role[:task].each_value {|task| do_task(dict, task) }
     role[:var].each_value {|var| do_var(dict, var) }
+    role[:used_vars] = role[:task].each_value.flat_map {|task| task[:used_vars] }.uniq
+    role[:facts] = role[:task].each_value.flat_map {|t| t[:facts] }
   end
 
   def do_role_2(dict, role)
-
-    role[:used_vars] = role[:task].each_value.flat_map {|task| task[:used_vars] }.uniq
-#    role[:used_vars] += role[:role_deps].flat_map {|dep| dep[:used_vars] }
-#    role[:facts] = role[:task].flat_map {|t| t[:facts] }
-#    role[:facts] += role[:role_deps].flat_map {|dep| dep[:facts] }
-#    role[:unused_vars] = (role[:var] - role[:used_vars]).reject {|v|
-#      role[:facts].include? v[:name]
-#    }
-#    role[:undefed_vars] = role[:used_vars] - role[:var]
+    # This method should be called in bottom-up dependency order.
+    # A var is used if a task from this role, or any role it depends on, refers to it
+    # :used_vars, :facts and :all_facts are [String], the rest should be [Var]
+    role[:all_vars] = role[:var].values + role[:role_deps].flat_map {|dep| dep[:all_vars] }
+    role[:used_vars] += role[:role_deps].flat_map {|dep| dep[:used_vars] }
+    role[:all_facts] = role[:facts] + role[:role_deps].flat_map {|dep| dep[:facts] }
+    role[:unused_vars] = role[:var].each_value.reject {|v|
+      role[:used_vars].include? v[:name] or
+      role[:all_facts].include? v[:name]
+    }
+    role[:undefed_vars] = role[:used_vars] - role[:var].each_value.map {|v| v[:name] }
+    role[:loaded] = true
   end
 
   def do_var(dict, var)
+    var[:used] = :no
   end
 
   def do_playbook(dict, playbook)
     data = playbook[:data][0]
-    playbook[:roles] = (data['roles'] || []).map {|role|
+    playbook[:role] = (data['roles'] || []).map {|role|
       if role.instance_of? Hash
         role = role['role']
       end
       dict[:role][role]
     }.uniq  # FIXME
 
-    playbook[:tasks] = (data['tasks'] || []).map {|task_h|
+    playbook[:task] = (data['tasks'] || []).map {|task_h|
       path = task_h['include'].split(" ")[0]
       if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
         raise "Bad include from playbook #{playbook[:name]}: #{path}"
@@ -69,17 +77,17 @@ class Postprocessor
   end
 
   def do_task(dict, task)
+    task[:used_vars] = find_vars(task[:data]).uniq
+
+    # A fact is created by set_fact in a task.
+    # A var which is updated by set_fact is not what I'm calling a fact.
     task[:facts] = task[:data].map {|i| i['set_fact'] }.compact.flat_map {|i|
       if i.is_a? Hash
         i.keys
       else
         [i.split("=")[0]]
       end
-    }
-
-    task[:used_vars] = find_vars(task[:data]).reject {|varname|
-      task[:facts].include? varname
-    }.uniq
+    } - task[:used_vars]
   end
 
   def find_vars(data)

@@ -14,6 +14,8 @@ class GNode
   attr_accessor :key, :node, :attrs
   attr_accessor :inc, :out
   attr_accessor :rank
+  # Somewhere to link data, to help decoration
+  attr_accessor :data
 
   def initialize(key, attrs = {})
     @key = key

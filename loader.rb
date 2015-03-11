@@ -47,7 +47,7 @@ class Loader
   end
 
   def load_dir(playbook_dir)
-    dict = {}
+    dict = {:role => {}, :playbook => {}}
 
     rolesdir = File.join(playbook_dir, "roles")
     Loader.ls(rolesdir).

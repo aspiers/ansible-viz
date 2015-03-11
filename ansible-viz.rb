@@ -59,7 +59,7 @@ if __FILE__ == $0
   options.playbook_dir = ARGV.shift
 
   data = Loader.new.load_dir(options.playbook_dir)
-  data = Postprocessor.new.postprocess(data)
+  Postprocessor.new.postprocess(data)
   graph = Grapher.new.graph(data, options)
   write(graph, options.output_filename)
 end

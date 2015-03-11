@@ -1,4 +1,4 @@
 # Variables for the vagrant environment
 ---
-keyA: "ghi"
-keyB: "jkl"
+varA: "ghi"
+varB: "jkl"

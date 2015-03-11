@@ -47,8 +47,8 @@ class TC_Loader < Test::Unit::TestCase
     d = {:name => "roleX"}
     vars = Loader.new.mk_vars(d, "sample/roles/role1/vars", "vars.yml")
 
-    expect = [thing({}, :var, "key1", {:role=>d}),
-              thing({}, :var, "key2", {:role=>d})]
+    expect = [thing({}, :var, "var1", {:role=>d}),
+              thing({}, :var, "var2", {:role=>d})]
     assert_equal expect, vars
   end
 

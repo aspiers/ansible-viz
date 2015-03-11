@@ -1,4 +1,4 @@
 # Variables for the vagrant environment
 ---
-key1: "abc"
-key2: "def"
+var1: "abc"
+var2: "def"
