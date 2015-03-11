@@ -11,6 +11,7 @@ require 'pp'
 
 require './graphviz'
 require './loader'
+require './postprocessor'
 require './grapher'
 
 
@@ -57,9 +58,8 @@ if __FILE__ == $0
   end
   options.playbook_dir = ARGV.shift
 
-  loader = Loader.new
-  data = loader.load_dir(options.playbook_dir)
-  maker = Grapher.new
-  graph = maker.graph(data, options)
+  data = Loader.new.load_dir(options.playbook_dir)
+  data = Postprocessor.new.postprocess(data)
+  graph = Grapher.new.graph(data, options)
   write(graph, options.output_filename)
 end

@@ -4,42 +4,72 @@ require 'test/unit'
 require './ansible-viz'
 
 class TC_Loader < Test::Unit::TestCase
-end
+  def test_thing
+    d = {}
+    it = thing(d, :abc, "def", {"ghi" => "jkl"})
+    assert_equal({:type=>:abc, :name=>"def", "ghi"=>"jkl"}, it)
+    assert_equal d[:abc]["def"], it
 
-class TC_FindVars < Test::Unit::TestCase
-  def setup
-    @l = Loader.new
+    it2 = thing(d, :abc, "def", {"ghi" => "jkl"})
+    assert_equal it, it2
   end
 
-  def try(expect, input)
-    assert_equal expect, @l.find_vars(input)
+  def test_ls_yml
+    assert_equal ["playbook.yml"], Loader.ls_yml("sample")
+    begin
+      Loader.ls_yml("s")
+      flunk
+    rescue RuntimeError
+    end
+    assert_equal [], Loader.ls_yml("s", [])
   end
 
-  def test_str
-    try ["def"], "abc {{def}} ghi"
+  def test_load_dir
+    d = Loader.new.load_dir("sample")
+    [:playbook, :role].each {|i| assert d.keys.include?(i), "missing #{i}" }
   end
 
-  def test_list
-    try ["1", "2"], ["{{1}}", "{{2}}"]
+  def test_role
+    d = {}
+    role = Loader.new.mk_role(d, "sample/roles", "role1")
+
+    assert_equal 2, role[:var].keys.length
+    role.delete(:var)
+
+    assert_equal 2, role[:task].keys.length
+    role.delete(:task)
+
+    expect = thing({}, :role, "role1", {:role_deps => ["roleA"]})
+    assert_equal expect, role
   end
 
-  def test_hash
-    try ["1", "2"], {:a => "{{1}}", :b => "{{2}}"}
+  def test_vars
+    d = {:name => "roleX"}
+    vars = Loader.new.mk_vars(d, "sample/roles/role1/vars", "vars.yml")
+
+    expect = [thing({}, :var, "key1", {:role=>d}),
+              thing({}, :var, "key2", {:role=>d})]
+    assert_equal expect, vars
   end
 
-  def test_nesting
-    try ["1", "2", "3"], {:a => ["{{1}}", "{{2}}"], :b => "{{3}}"}
+  def test_task
+    d = {:name => "roleX"}
+    task = Loader.new.mk_task(d, "sample/roles/role1/tasks", "task1.yml")
+
+    task.delete(:data)
+    expect = thing({}, :task, "task1", {:role=>d})
+    assert_equal expect, task
   end
 
-  def test_bar
-    try ["1", "2"], "{{1|up(2)}}"
-  end
+  def test_playbook
+    d = {}
+    playbook = Loader.new.mk_playbook(d, "sample", "playbook.yml")
 
-  def test_stdout
-    try [], "{{1.stdout}}"
-  end
+    playbook = d[:playbook].values[0]
+    assert_not_nil playbook
 
-  def test_complex
-    try ["1", "2"], "{{1 | up(2 | default({}))}}"
+    playbook.delete(:data)
+    expect = {:type=>:playbook, :name=>"playbook"}
+    assert_equal expect, playbook
   end
 end

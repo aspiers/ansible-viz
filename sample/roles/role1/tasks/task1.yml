@@ -1,0 +1,26 @@
+# Use the default included task set to load variables when the role is included
+---
+
+# Include all of the individual variables files for this role
+- include_vars: vars.yml
+  tags:
+      vars
+
+# Run a task to set the working directory fact
+- include: _ptask.yml
+  tags:
+      vars
+
+# Merge user-override dictionaries into the defaults
+- name: main | Merge dev-env apt package settings
+  set_fact:
+    fact1: "{{ var1 |
+      update(var2 | default({})) }}"
+  tags:
+      vars
+
+# Merge user-override dictionaries into the defaults
+- name: main | Merge dev-env apt package settings
+  set_fact: fact2=abc
+  tags:
+      vars

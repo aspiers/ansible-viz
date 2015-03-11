@@ -1,0 +1,11 @@
+---
+- hosts: build
+  sudo: yes
+  roles:
+    - role1
+  tasks:
+    - include: roles/role1/tasks/task1.yml service=packager
+    - include: roles/roleA/tasks/taskA.yml service=nova
+  tags:
+  - main
+  - build
