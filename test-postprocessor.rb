@@ -9,60 +9,79 @@ class TC_Postprocessor < Test::Unit::TestCase
     @d = {}
     @role1 = Loader.new.mk_role(@d, "sample/roles", "role1")
     @roleA = Loader.new.mk_role(@d, "sample/roles", "roleA")
+    @pp = Postprocessor.new
   end
 
   def test_task
     task = @role1[:task].each_value.find {|t| t[:name] == 'task1' }
-    Postprocessor.new.do_task(@d, task)
+    @pp.do_task(@d, task)
 
-    assert_equal %w(fact1 fact2), task[:facts]
-    assert_equal %w(var1 var2), task[:used_vars]
+    assert_equal %w(fact1 fact2), task[:fact]
+    assert_equal %w(var1 var2 factA), task[:used_vars]
   end
 
   def test_var
     var = @role1[:var].each_value.find {|v| v[:name] == 'var1' }
-    Postprocessor.new.do_var(@d, var)
-    assert_equal :no, var[:used]
+    @pp.do_var(@d, var)
+    assert_equal false, var[:used]
+    assert_equal true, var[:defined]
   end
 
   def test_playbook
     playbook = Loader.new.mk_playbook(@d, "sample", "playbook.yml")
-    Postprocessor.new.do_playbook(@d, playbook)
+    @pp.do_playbook(@d, playbook)
 
     assert_equal [@role1], playbook[:role]
     assert_equal [@role1[:task]["task1"], @roleA[:task]["taskA"]], playbook[:task]
   end
 
-  def test_role_1
-    Postprocessor.new.do_role_1(@d, @role1)
+  def test_role
+    @pp.do_role(@d, @role1)
 
     assert_equal [@roleA], @role1[:role_deps]
     # Check that the tasks + vars have been postprocessed
     task = @role1[:task]["task1"]
-    assert_equal %w(fact1 fact2), task[:facts]
-    assert_equal %w(var1 var2), task[:used_vars]
+    assert_equal %w(fact1 fact2), task[:fact]
+    assert_equal %w(var1 var2 factA), task[:used_vars]
   end
 
-  def test_role_2
-    Postprocessor.new.do_role_1(@d, @roleA)
-    Postprocessor.new.do_role_1(@d, @role1)
-    Postprocessor.new.do_role_2(@d, @roleA)
-    Postprocessor.new.do_role_2(@d, @role1)
+  def test_var_definition
+    @pp.do_role(@d, @roleA)
+    @pp.do_role(@d, @role1)
+    @pp.calc_defined_vars(@d, @roleA)
+    @pp.calc_defined_vars(@d, @role1)
 
-    assert_equal %w(varA varB), @roleA[:all_vars].map {|v| v[:name] }
+    assert_equal %w(varA varB), @roleA[:defined_vars].map {|v| v[:name] }
+    @roleA[:defined_vars].each {|v|
+      assert_equal true, v[:defined]
+      assert_equal false, v[:used]
+    }
     assert_equal %w(varA varB), @roleA[:used_vars]
-    assert_equal [], @roleA[:unused_vars].map {|v| v[:name] }
-    assert_equal %w(factA factB), @roleA[:facts]
+    assert_equal %w(factA factB), @roleA[:fact]
     assert_equal %w(factA factB), @roleA[:all_facts]
-    assert_equal %w(), @roleA[:undefed_vars]
 
-    assert_equal %w(var1 var2 varA varB), @role1[:all_vars].map {|v| v[:name] }
-    assert_equal %w(var1 var1_up var2 varA varB), @role1[:used_vars]
-    assert_equal [], @role1[:unused_vars].map {|v| v[:name] }
-    assert_equal %w(fact3 fact1 fact2), @role1[:facts]
+    assert_equal %w(var1 var2 varA varB), @role1[:defined_vars].map {|v| v[:name] }
+    @role1[:defined_vars].each {|v|
+      assert_equal true, v[:defined]
+      assert_equal false, v[:used]
+    }
+    assert_equal %w(var1 var1_up var2 factA varA varB), @role1[:used_vars]
+    assert_equal %w(fact3 fact1 fact2), @role1[:fact]
     assert_equal %w(fact3 fact1 fact2 factA factB), @role1[:all_facts]
-    # FIXME
-#    assert_equal %w(), @role1[:undefed_vars]
+  end
+
+  def test_var_usage
+    up = [@roleA, @role1]
+    up.each {|role| @pp.do_role(@d, role) }
+    up.each {|role| @pp.calc_defined_vars(@d, role) }
+    up.reverse.each {|role| @pp.check_used_vars(@d, role) }
+
+    assert_equal %w(var1 var1_up var2 factA varA varB), @role1[:used_vars].map {|v| v[:name] }
+    @role1[:used_vars].each {|v| assert_equal true, v[:used] }
+    @role1[:used_vars].each {|v| assert_equal v[:name] != 'var1_up', v[:defined], "checking #{v[:name]}" }
+    assert_equal %w(varA varB), @roleA[:used_vars].map {|v| v[:name] }
+    @roleA[:used_vars].each {|v| assert_equal true, v[:used] }
+    @roleA[:used_vars].each {|v| assert_equal true, v[:defined] }
   end
 end
 

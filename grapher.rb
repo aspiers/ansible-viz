@@ -19,7 +19,7 @@ class Grapher
     add_nodes(g, dict)
     connect_playbooks(g, dict)
     connect_roles(g, dict)
-#    hide_dull_tasks(g, dict)
+    hide_dull_tasks(g, dict)
 
     decorate(g, dict, options)
 
@@ -32,21 +32,26 @@ class Grapher
 
   def add_nodes(g, dict)
     dict[:role].each_pair {|name, role|
-      add_node(g, name, role)
-      role[:task].each_pair {|n, task| add_node(g, n, task) }
-      role[:var].each_pair {|n, var| add_node(g, n, var) }
+      add_node(g, role)
+      role[:task].each_pair {|n, task| add_node(g, task, task[:role]) }
+      role[:var].each_pair {|n, var| add_node(g, var, var[:role]) }
     }
     dict[:playbook].each_pair {|name, playbook|
-      add_node(g, name, playbook)
-      playbook[:role].each {|role| add_node(g, role[:name], role) }
-      playbook[:task].each {|task| add_node(g, task[:name], task) }
+      add_node(g, playbook)
+      playbook[:role].each {|role| add_node(g, role) }
+      playbook[:task].each {|task| add_node(g, task, task[:role]) }
     }
   end
 
-  def add_node(g, name, it)
-      node = g.get_or_make(name)
-      node.data = it
-      it[:node] = node
+  def add_node(g, it, parent=nil)
+    name = it[:name]
+    if parent
+      name = parent[:name] + "::" + name
+    end
+    node = g.get_or_make(name)
+    node.data = it
+    it[:node] = node
+    node[:label] = it[:name]
   end
 
   def connect_playbooks(g, dict)
@@ -90,10 +95,12 @@ class Grapher
   end
 
   def hide_dull_tasks(g, dict)
-    hide_tasks = dict[:task].each_value.find_all {|it|
-      it[:label] =~ /^_|^main$/
-    }.map {|it| it[:node] }
-    g.lowercut(*hide_tasks)
+    dict[:role].values.each {|r|
+      hide_tasks = r[:task].each_value.find_all {|it|
+        it[:name] =~ /^_|^main$/
+      }.map {|it| it[:node] }
+      g.lowercut(*hide_tasks)
+    }
   end
 
 
@@ -109,23 +116,18 @@ class Grapher
       end
     }
 
-  #    dict[:role].values.each {|r|
-  #      r[:node][:tooltip] = r[:unused_vars].map {|v| v[:label] }.join(" ")
-  #    }
-    dict[:role].values.flat_map {|r| r[:unused_vars] }.
-        map {|v| v[:node] }.
-        each {|node|
-      node[:fillcolor] = 'yellow'
-      node[:tooltip] += '. (EXPERIMENTAL) appears not to be used by any task in the owning role'
+    dict[:role].values.each {|r|
+      r[:var].each_value {|v|
+        if not v[:used]
+          v[:node][:fillcolor] = 'yellow'
+          v[:node][:tooltip] += '. (EXPERIMENTAL) appears not to be used by any task in the owning role'
+        elsif not v[:defined]
+          v[:node][:fillcolor] = 'red'
+          v[:node][:tooltip] += '. (EXPERIMENTAL) not defined by this role;' +
+                            ' could be included from another role or not really a var'
+        end
+      }
     }
-
-#    dict[:role].values.flat_map {|r| r[:undefed_vars] }.compact. # FIXME compact
-#        map {|v| v[:node] }.
-#        each {|node|
-#      node[:fillcolor] = 'red'
-#      node[:tooltip] += '. (EXPERIMENTAL) not defined by this role;' +
-#                    ' could be included from another role or not really a var'
-#    }
   end
 
   def decorate_nodes(g, dict, options)
@@ -138,16 +140,12 @@ class Grapher
       types[type].each_pair {|k,v| node[k] = v }
       node[:style] = 'filled'
       node[:tooltip] = type.to_s.capitalize
-#      case type
-#      when :task
-#        node[:label] = it[:label]
-#      when :var
-#      end
-#      if it[:label]
-#        node[:label] = it[:label]
-#        node[:tooltip] = it[:name]
-#      else
-#      end
+      case type
+      when :task, :var
+        node[:tooltip] += " #{node.data[:role][:name]}::#{node.data[:name]}"
+      else
+        node[:tooltip] += " " + node.data[:name]
+      end
     }
   end
 end

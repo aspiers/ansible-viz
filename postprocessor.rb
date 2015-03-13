@@ -7,21 +7,36 @@ require 'pp'
 
 
 class Postprocessor
+  # Responsible for establishing invariants on data, EG every ref should be present even if []/{}
+  # Most 'business logic' should live here, IE calculating fancy stuff
+
   def postprocess(dict)
-    dict[:role].each_value {|role| do_role_1(dict, role) }
+    # Sweep up, collecting defined vars onto each role;
+    # then sweep down checking all used vars are defined.
+    dict[:role].each_value {|role| do_role(dict, role) }
     todo = dict[:role].values
+    bottomup = []
     while todo.length > 0
       role = todo.shift
       if role[:role_deps].all? {|dep| dep[:loaded] }
-        do_role_2(dict, role)
+        calc_defined_vars(dict, role)
+        role[:loaded] = true
+        bottomup.push role
       else
         todo.push role
       end
     end
+    bottomup.reverse.each {|r|
+      r.delete :loaded
+      check_used_vars(dict, r)
+      push_used_vars_to_tasks(dict, r)
+    }
+
+    # Oh yeah process playbooks too
     dict[:playbook].each_value {|playbook| do_playbook(dict, playbook) }
   end
 
-  def do_role_1(dict, role)
+  def do_role(dict, role)
     role[:role_deps] = role[:role_deps].map {|depname|
       dep = dict[:role][depname]
       if dep == nil
@@ -31,30 +46,48 @@ class Postprocessor
     }
 
     role[:task] ||= {}
-    role[:var] ||= {}
     role[:task].each_value {|task| do_task(dict, task) }
+    role[:var] ||= {}
     role[:var].each_value {|var| do_var(dict, var) }
-    role[:used_vars] = role[:task].each_value.flat_map {|task| task[:used_vars] }.uniq
-    role[:facts] = role[:task].each_value.flat_map {|t| t[:facts] }
   end
 
-  def do_role_2(dict, role)
-    # This method should be called in bottom-up dependency order.
-    # A var is used if a task from this role, or any role it depends on, refers to it
-    # :used_vars, :facts and :all_facts are [String], the rest should be [Var]
-    role[:all_vars] = role[:var].values + role[:role_deps].flat_map {|dep| dep[:all_vars] }
+  def calc_defined_vars(dict, role)
+    # This method must be called in bottom-up dependency order.
+    role[:defined_vars] = role[:var].values + role[:role_deps].flat_map {|dep| dep[:defined_vars] }
+
+    role[:used_vars] = role[:task].each_value.flat_map {|task| task[:used_vars] }.uniq
     role[:used_vars] += role[:role_deps].flat_map {|dep| dep[:used_vars] }
-    role[:all_facts] = role[:facts] + role[:role_deps].flat_map {|dep| dep[:facts] }
-    role[:unused_vars] = role[:var].each_value.reject {|v|
-      role[:used_vars].include? v[:name] or
-      role[:all_facts].include? v[:name]
+    role[:fact] = role[:task].each_value.flat_map {|t| t[:fact] }
+    role[:all_facts] = role[:fact] + role[:role_deps].flat_map {|dep| dep[:fact] }
+  end
+
+  def check_used_vars(dict, role)
+    # This method must be called in top-down dependency order.
+    # A var is used if a task from this role, or any role it depends on, refers to it
+    role[:used_vars] = role[:used_vars].map {|varname|
+      var = role[:defined_vars].find {|v| v[:name] == varname}
+      if var
+        var[:used] = true
+        var
+      else
+        thing(role, :var, varname, {:role => role, :used => true, :defined => false})
+      end
     }
-    role[:undefed_vars] = role[:used_vars] - role[:var].each_value.map {|v| v[:name] }
-    role[:loaded] = true
+  end
+
+  def push_used_vars_to_tasks(dict, role)
+    # Not 100% sure why I need this
+    # After do_task, task[:used_vars] is a [String]. Convert to [Var].
+#    vars_by_name = role[:used_vars].map {|v| [v[:name], v] }
+#    role[:task].each {|t|
+#      t[:used_vars] = t[:used_vars].map {|n| vars_by_name[n] }
+#    }
   end
 
   def do_var(dict, var)
-    var[:used] = :no
+    # This only gets called on vars defined in a role. We'll work out whether it was really used later.
+    var[:used] = false
+    var[:defined] = true
   end
 
   def do_playbook(dict, playbook)
@@ -81,7 +114,7 @@ class Postprocessor
 
     # A fact is created by set_fact in a task.
     # A var which is updated by set_fact is not what I'm calling a fact.
-    task[:facts] = task[:data].map {|i| i['set_fact'] }.compact.flat_map {|i|
+    task[:fact] = task[:data].map {|i| i['set_fact'] }.compact.flat_map {|i|
       if i.is_a? Hash
         i.keys
       else
@@ -97,7 +130,7 @@ class Postprocessor
       data.flat_map {|i| find_vars(i) }
     else
       # This really needs a proper parser
-      fns = ["join", "int", "item", "dirname", "basename", "regex_replace"]
+      fns = %w(join int item dirname basename regex_replace)
       data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
         map {|s|
           os = nil

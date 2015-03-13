@@ -21,6 +21,6 @@
 
 # Merge user-override dictionaries into the defaults
 - name: main | Merge dev-env apt package settings
-  set_fact: fact2=abc
+  set_fact: fact2={{factA}}
   tags:
       vars
