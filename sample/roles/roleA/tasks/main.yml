@@ -1,0 +1,11 @@
+---
+- include_vars: maininc.yml
+
+- name: main | Role A main
+  set_fact:
+    factAmain: "{{ defA |
+      update(varAmain | default({})) |
+      update(varAmaininc | default({})) }}"
+
+- name: main | Role A main
+  blah: "{{ factAmain | varAundef }}"

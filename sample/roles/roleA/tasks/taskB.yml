@@ -1,0 +1,4 @@
+---
+- name: partA | Role A taskB partA
+  set_fact:
+    factB: "omg"

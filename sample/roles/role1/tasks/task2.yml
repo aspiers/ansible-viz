@@ -1,10 +1,4 @@
-# Use the default included task set to load variables when the role is included
 ---
-
-# Merge user-override dictionaries into the defaults
-- name: main | Merge dev-env apt package settings
+- name: part1 | Role 1 task2 part1
   set_fact:
-    fact3: "{{ var1 |
-      update(var1_up | default({})) }}"
-  tags:
-      vars
+    fact2: "omg"

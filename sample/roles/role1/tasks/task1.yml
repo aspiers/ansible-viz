@@ -1,26 +1,15 @@
-# Use the default included task set to load variables when the role is included
 ---
+- include_vars: extra.yml
 
-# Include all of the individual variables files for this role
-- include_vars: vars.yml
-  tags:
-      vars
+- include: task2.yml
 
-# Run a task to set the working directory fact
-- include: _ptask.yml
-  tags:
-      vars
+- name: partA | Role A taskA partA
+  doobry: "{{ defA |
+      update(varAmain | default({})) |
+      update(varAextra | default({})) }}"
 
-# Merge user-override dictionaries into the defaults
-- name: main | Merge dev-env apt package settings
+- name: part1 | Role 1 task1 part1
   set_fact:
-    fact1: "{{ var1 |
-      update(var2 | default({})) }}"
-  tags:
-      vars
-
-# Merge user-override dictionaries into the defaults
-- name: main | Merge dev-env apt package settings
-  set_fact: fact2={{factA}}
-  tags:
-      vars
+    fact1unused: "{{ def1 |
+      update(var1main | default({})) |
+      update(var1extra | default({})) }}"

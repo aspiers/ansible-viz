@@ -11,11 +11,11 @@ require 'pp'
 
 def thing(dict, type, name, extra = {})
   dict[type] ||= {}
-  it = dict[type][name]
-  if !it
-    it = {:type => type, :name => name}
-    dict[type][name] = it
+  if dict[type][name]
+    raise "#{type.to_s.capitalize} #{name} already known"
   end
+  it = {:type => type, :name => name}
+  dict[type][name] = it
   it.merge!(extra)
   it
 end
@@ -74,21 +74,29 @@ class Loader
 
     vardir = File.join(path, name, "vars")
     Loader.ls_yml(vardir, []).
-      flat_map {|f| mk_vars(role, vardir, f) }.
-      uniq  # FIXME
+      map {|f| mk_varset(role, vardir, f) }
+
+    vardefdir = File.join(path, name, "defaults")
+    Loader.ls_yml(vardefdir, []).
+      map {|f| mk_vardefaults(role, vardefdir, f) }
 
     taskdir = File.join(path, name, "tasks")
     Loader.ls_yml(taskdir, []).
-      map {|f| mk_task(role, taskdir, f) }.
-      uniq  # FIXME
+      map {|f| mk_task(role, taskdir, f) }
 
     role
   end
 
-  def mk_vars(role, path, file)
-    (Loader.yaml_slurp(path, file) || {}).keys.map {|key|
-      thing(role, :var, key, {:role => role})
-    }
+  def mk_varset(role, path, file)
+    name = file.sub(/.yml$/, '')
+    data = Loader.yaml_slurp(path, file) || {}
+    thing(role, :varset, name, {:role => role, :data => data})
+  end
+
+  def mk_vardefaults(role, path, file)
+    name = file.sub(/.yml$/, '')
+    data = Loader.yaml_slurp(path, file) || {}
+    thing(role, :vardefaults, name, {:role => role, :data => data})
   end
 
   def mk_task(role, path, file)

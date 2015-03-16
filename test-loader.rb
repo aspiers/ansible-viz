@@ -10,18 +10,21 @@ class TC_Loader < Test::Unit::TestCase
     assert_equal({:type=>:abc, :name=>"def", "ghi"=>"jkl"}, it)
     assert_equal d[:abc]["def"], it
 
-    it2 = thing(d, :abc, "def", {"ghi" => "jkl"})
-    assert_equal it, it2
+    begin
+      thing(d, :abc, "def", {"ghi" => "jkl"})
+      flunk
+    rescue
+    end
   end
 
   def test_ls_yml
-    assert_equal ["playbook.yml"], Loader.ls_yml("sample")
+    assert_has_all %w(playbook1.yml playbookA.yml), Loader.ls_yml("sample")
     begin
-      Loader.ls_yml("s")
+      Loader.ls_yml("none")
       flunk
     rescue RuntimeError
     end
-    assert_equal [], Loader.ls_yml("s", [])
+    assert_equal [], Loader.ls_yml("none", [])
   end
 
   def test_load_dir
@@ -33,23 +36,35 @@ class TC_Loader < Test::Unit::TestCase
     d = {}
     role = Loader.new.mk_role(d, "sample/roles", "role1")
 
-    assert_equal 2, role[:var].keys.length
-    role.delete(:var)
+    assert_has_all %w(maininc extra main), role[:varset].values.map {|vs| vs[:name] }
+    role.delete(:varset)
 
-    assert_equal 2, role[:task].keys.length
+    assert_has_all %w(main), role[:vardefaults].values.map {|vs| vs[:name] }
+    role.delete(:vardefaults)
+
+    assert_has_all %w(main task1 task2), role[:task].values.map {|t| t[:name] }
     role.delete(:task)
 
     expect = thing({}, :role, "role1", {:role_deps => ["roleA"]})
     assert_equal expect, role
   end
 
-  def test_vars
+  def test_varset
     d = {:name => "roleX"}
-    vars = Loader.new.mk_vars(d, "sample/roles/role1/vars", "vars.yml")
+    varset = Loader.new.mk_varset(d, "sample/roles/role1/vars", "main.yml")
 
-    expect = [thing({}, :var, "var1", {:role=>d}),
-              thing({}, :var, "var2", {:role=>d})]
-    assert_equal expect, vars
+    varset.delete :data
+    expect = thing({}, :varset, "main", {:role => d})
+    assert_equal expect, varset
+  end
+
+  def test_vardefaults
+    d = {:name => "roleX"}
+    vardefaults = Loader.new.mk_vardefaults(d, "sample/roles/role1/defaults", "main.yml")
+
+    vardefaults.delete :data
+    expect = thing({}, :vardefaults, "main", {:role => d})
+    assert_equal expect, vardefaults
   end
 
   def test_task
@@ -63,13 +78,13 @@ class TC_Loader < Test::Unit::TestCase
 
   def test_playbook
     d = {}
-    playbook = Loader.new.mk_playbook(d, "sample", "playbook.yml")
+    playbook = Loader.new.mk_playbook(d, "sample", "playbook1.yml")
 
     playbook = d[:playbook].values[0]
     assert_not_nil playbook
 
     playbook.delete(:data)
-    expect = {:type=>:playbook, :name=>"playbook"}
+    expect = {:type=>:playbook, :name=>"playbook1"}
     assert_equal expect, playbook
   end
 end

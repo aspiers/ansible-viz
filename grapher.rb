@@ -10,8 +10,6 @@ require 'pp'
 
 class Grapher
   def graph(dict, options)
-    # FIXME Cosmetic stuff should be in decorate_* methods
-
     g = Graph.new
     g[:rankdir] = 'LR'
     g[:tooltip] = ' '
@@ -24,7 +22,8 @@ class Grapher
     decorate(g, dict, options)
 
     if not options.show_vars
-#      g.cut(*(dict[:var].values.map {|it| it[:node] }))
+      to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
+      g.cut(*to_cut)
     end
 
     g
@@ -34,7 +33,9 @@ class Grapher
     dict[:role].each_pair {|name, role|
       add_node(g, role)
       role[:task].each_pair {|n, task| add_node(g, task, task[:role]) }
-      role[:var].each_pair {|n, var| add_node(g, var, var[:role]) }
+      role[:varset].each_pair {|vsn, vs|
+        vs[:var].each_pair {|vn, v| add_node(g, v, vs) }
+      }
     }
     dict[:playbook].each_pair {|name, playbook|
       add_node(g, playbook)
@@ -87,9 +88,11 @@ class Grapher
 #        }
       }
 
-      (role[:var] || []).each_value {|var|
-        g.add GEdge[role[:node], var[:node],
-          {:tooltip => "provides var"}]
+      (role[:varset] || []).each_value {|vs|
+        vs[:var].each_value {|v|
+          g.add GEdge[role[:node], v[:node],
+            {:tooltip => "provides var"}]
+        }
       }
     }
   end
@@ -116,32 +119,33 @@ class Grapher
       end
     }
 
-    dict[:role].values.each {|r|
-      r[:var].each_value {|v|
-        if not v[:used]
-          v[:node][:fillcolor] = 'yellow'
-          v[:node][:tooltip] += '. (EXPERIMENTAL) appears not to be used by any task in the owning role'
-        elsif not v[:defined]
-          v[:node][:fillcolor] = 'red'
-          v[:node][:tooltip] += '. (EXPERIMENTAL) not defined by this role;' +
-                            ' could be included from another role or not really a var'
-        end
-      }
-    }
+    # FIXME
+#    dict[:role].values.each {|r|
+#      r[:var].each_value {|v|
+#        if not v[:used]
+#          v[:node][:fillcolor] = 'yellow'
+#          v[:node][:tooltip] += '. (EXPERIMENTAL) appears not to be used by any task in the owning role'
+#        elsif not v[:defined]
+#          v[:node][:fillcolor] = 'red'
+#          v[:node][:tooltip] += '. (EXPERIMENTAL) not defined by this role;' +
+#                            ' could be included from another role or not really a var'
+#        end
+#      }
+#    }
   end
 
   def decorate_nodes(g, dict, options)
     types = {:playbook => {:shape => 'folder', :fillcolor => 'cornflowerblue'},
              :role => {:shape => 'house', :fillcolor => 'palegreen'},
-             :task => {:shape => 'oval', :fillcolor => 'white'},
-             :var => {:shape => 'octagon', :fillcolor => 'cornsilk'}}
+             :task => {:shape => 'octagon', :fillcolor => 'cornsilk'},
+             :var => {:shape => 'oval', :fillcolor => 'white'}}
     g.nodes.each {|node|
       type = node.data[:type]
       types[type].each_pair {|k,v| node[k] = v }
       node[:style] = 'filled'
       node[:tooltip] = type.to_s.capitalize
       case type
-      when :task, :var
+      when :task  # FIXME , :var
         node[:tooltip] += " #{node.data[:role][:name]}::#{node.data[:name]}"
       else
         node[:tooltip] += " " + node.data[:name]
@@ -152,9 +156,9 @@ end
 
 # This is accessed as a global from graph_viz.rb, EWW
 def rank_node(node)
-  case node[:shape]
-  when /folder/ then :source
-  when /oval/ then :same
-  when /octagon/ then :sink
+  case node.data[:type]
+  when :playbook then :source
+  when :task then :same
+  when :var then :sink
   end
 end
