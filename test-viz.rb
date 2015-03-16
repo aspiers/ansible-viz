@@ -20,4 +20,5 @@ end
 require 'test/unit'
 require './test-loader'
 require './test-postprocessor'
-#require './test-grapher'
+require './test-scoper'
+require './test-grapher'

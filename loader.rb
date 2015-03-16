@@ -10,13 +10,9 @@ require 'pp'
 
 
 def thing(dict, type, name, extra = {})
-  dict[type] ||= {}
-  if dict[type][name]
-    raise "#{type.to_s.capitalize} #{name} already known"
-  end
-  it = {:type => type, :name => name}
-  dict[type][name] = it
-  it.merge!(extra)
+  it = {:type => type, :name => name}.merge(extra)
+  dict[type] ||= []
+  dict[type].push it
   it
 end
 
@@ -47,7 +43,7 @@ class Loader
   end
 
   def load_dir(playbook_dir)
-    dict = {:role => {}, :playbook => {}}
+    dict = {}
 
     rolesdir = File.join(playbook_dir, "roles")
     Loader.ls(rolesdir).

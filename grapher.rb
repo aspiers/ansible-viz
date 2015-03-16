@@ -30,14 +30,14 @@ class Grapher
   end
 
   def add_nodes(g, dict)
-    dict[:role].each_pair {|name, role|
+    dict[:role].each {|role|
       add_node(g, role)
-      role[:task].each_pair {|n, task| add_node(g, task, task[:role]) }
-      role[:varset].each_pair {|vsn, vs|
-        vs[:var].each_pair {|vn, v| add_node(g, v, vs) }
+      role[:task].each {|task| add_node(g, task, task[:role]) }
+      role[:varset].each {|vs|
+        vs[:var].each {|v| add_node(g, v, vs) }
       }
     }
-    dict[:playbook].each_pair {|name, playbook|
+    dict[:playbook].each {|playbook|
       add_node(g, playbook)
       playbook[:role].each {|role| add_node(g, role) }
       playbook[:task].each {|task| add_node(g, task, task[:role]) }
@@ -56,7 +56,7 @@ class Grapher
   end
 
   def connect_playbooks(g, dict)
-    dict[:playbook].each_value {|playbook|
+    dict[:playbook].each {|playbook|
       (playbook[:role] || []).each {|role|
         g.add GEdge[playbook[:node], role[:node],
           {:tooltip => "includes"}]
@@ -70,14 +70,14 @@ class Grapher
   end
 
   def connect_roles(g, dict)
-    dict[:role].each_value {|role|
+    dict[:role].each {|role|
       (role[:role_deps] || []).each {|dep|
         g.add GEdge[role[:node], dep[:node],
           {:color => 'hotpink',
            :tooltip => "calls foreign task"}]
       }
 
-      (role[:task] || []).each_value {|task|
+      (role[:task] || []).each {|task|
         g.add GEdge[role[:node], task[:node],
           {:tooltip => "calls task"}]
 
@@ -88,8 +88,8 @@ class Grapher
 #        }
       }
 
-      (role[:varset] || []).each_value {|vs|
-        vs[:var].each_value {|v|
+      (role[:varset] || []).each {|vs|
+        vs[:var].each {|v|
           g.add GEdge[role[:node], v[:node],
             {:tooltip => "provides var"}]
         }
@@ -98,8 +98,8 @@ class Grapher
   end
 
   def hide_dull_tasks(g, dict)
-    dict[:role].values.each {|r|
-      hide_tasks = r[:task].each_value.find_all {|it|
+    dict[:role].each {|r|
+      hide_tasks = r[:task].each.find_all {|it|
         it[:name] =~ /^_|^main$/
       }.map {|it| it[:node] }
       g.lowercut(*hide_tasks)
@@ -112,7 +112,7 @@ class Grapher
   def decorate(g, dict, options)
     decorate_nodes(g, dict, options)
 
-    dict[:role].values.map {|r| r[:node] }.each {|node|
+    dict[:role].map {|r| r[:node] }.each {|node|
       if node.inc_nodes.empty?
         node[:fillcolor] = 'yellowgreen'
         node[:tooltip] = 'not used by any playbook'
@@ -120,8 +120,8 @@ class Grapher
     }
 
     # FIXME
-#    dict[:role].values.each {|r|
-#      r[:var].each_value {|v|
+#    dict[:role].each {|r|
+#      r[:var].each {|v|
 #        if not v[:used]
 #          v[:node][:fillcolor] = 'yellow'
 #          v[:node][:tooltip] += '. (EXPERIMENTAL) appears not to be used by any task in the owning role'

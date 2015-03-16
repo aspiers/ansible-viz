@@ -8,13 +8,7 @@ class TC_Loader < Test::Unit::TestCase
     d = {}
     it = thing(d, :abc, "def", {"ghi" => "jkl"})
     assert_equal({:type=>:abc, :name=>"def", "ghi"=>"jkl"}, it)
-    assert_equal d[:abc]["def"], it
-
-    begin
-      thing(d, :abc, "def", {"ghi" => "jkl"})
-      flunk
-    rescue
-    end
+    assert_has_all d[:abc], [it]
   end
 
   def test_ls_yml
@@ -36,13 +30,13 @@ class TC_Loader < Test::Unit::TestCase
     d = {}
     role = Loader.new.mk_role(d, "sample/roles", "role1")
 
-    assert_has_all %w(maininc extra main), role[:varset].values.map {|vs| vs[:name] }
+    assert_has_all %w(maininc extra main), role[:varset].map {|vs| vs[:name] }
     role.delete(:varset)
 
-    assert_has_all %w(main), role[:vardefaults].values.map {|vs| vs[:name] }
+    assert_has_all %w(main), role[:vardefaults].map {|vs| vs[:name] }
     role.delete(:vardefaults)
 
-    assert_has_all %w(main task1 task2), role[:task].values.map {|t| t[:name] }
+    assert_has_all %w(main task1 task2), role[:task].map {|t| t[:name] }
     role.delete(:task)
 
     expect = thing({}, :role, "role1", {:role_deps => ["roleA"]})
@@ -80,7 +74,7 @@ class TC_Loader < Test::Unit::TestCase
     d = {}
     playbook = Loader.new.mk_playbook(d, "sample", "playbook1.yml")
 
-    playbook = d[:playbook].values[0]
+    playbook = d[:playbook][0]
     assert_not_nil playbook
 
     playbook.delete(:data)

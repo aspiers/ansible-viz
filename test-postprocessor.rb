@@ -17,20 +17,20 @@ class TC_PostprocessorA < Test::Unit::TestCase
   end
 
   def test_task
-    taskA = @roleA[:task].each_value.find {|t| t[:name] == 'taskA' }
+    taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
     Postprocessor.new.do_task(@d, taskA)
 
     assert_has_all %w(taskB), taskA[:included_tasks].map {|v| v[:name] }
     assert_has_all %w(extra), taskA[:included_varsets].map {|v| v[:name] }
     assert_has_all %w(defA varAmain varAextra), taskA[:used_vars]
-    assert_has_all %w(factAunused), taskA[:var].values.map {|v| v[:name] }
+    assert_has_all %w(factAunused), taskA[:var].map {|v| v[:name] }
   end
 
   def test_vars
-    varset = @roleA[:varset].each_value.find {|vs| vs[:name] == 'extra' }
+    varset = @roleA[:varset].find {|vs| vs[:name] == 'extra' }
     Postprocessor.new.do_vars(@d, varset)
-    assert_has_all %w(varAextra), varset[:var].values.map {|v| v[:name] }
-    varset[:var].each_value {|var|
+    assert_has_all %w(varAextra), varset[:var].map {|v| v[:name] }
+    varset[:var].each {|var|
       assert !var[:used]
       assert var[:defined]
     }
@@ -41,7 +41,7 @@ class TC_PostprocessorA < Test::Unit::TestCase
     Postprocessor.new.do_playbook(@d, playbook)
 
     assert_has_all [@roleA], playbook[:role]
-    assert_has_all [@roleA[:task]["taskA"]], playbook[:task]
+    assert_has_all %w(taskA), playbook[:task].map {|t| t[:name] }
   end
 end
 
@@ -60,10 +60,10 @@ class TC_Postprocessor1 < Test::Unit::TestCase
   end
 
   def test_task
-    task1 = @role1[:task].each_value.find {|t| t[:name] == 'task1' }
+    task1 = @role1[:task].find {|t| t[:name] == 'task1' }
     Postprocessor.new.do_task(@d, task1)
 
-    assert_has_all %w(fact1unused), task1[:var].values.map {|v| v[:name] }
+    assert_has_all %w(fact1unused), task1[:var].map {|v| v[:name] }
     assert_has_all %w(def1 var1main var1extra
                       defA varAmain varAextra), task1[:used_vars]
     assert_has_all %w(extra), task1[:included_varsets].map {|v| v[:name] }
@@ -71,10 +71,10 @@ class TC_Postprocessor1 < Test::Unit::TestCase
   end
 
   def test_vars
-    varset = @role1[:varset].each_value.find {|vs| vs[:name] == 'extra' }
+    varset = @role1[:varset].find {|vs| vs[:name] == 'extra' }
     Postprocessor.new.do_vars(@d, varset)
-    assert_has_all %w(var1extra), varset[:var].values.map {|v| v[:name] }
-    varset[:var].each_value {|var|
+    assert_has_all %w(var1extra), varset[:var].map {|v| v[:name] }
+    varset[:var].each {|var|
       assert !var[:used]
       assert var[:defined]
     }
@@ -85,54 +85,10 @@ class TC_Postprocessor1 < Test::Unit::TestCase
     Postprocessor.new.do_playbook(@d, playbook)
 
     assert_has_all [@role1, @roleA], playbook[:role]
-    assert_has_all [@role1[:task]["task1"],
-                    @roleA[:task]["taskA"]],
-                   playbook[:task]
+    assert_has_all %w(task1 taskA), playbook[:task].map {|t| t[:name] }
   end
 end
 
-
-class TC_Scope < Test::Unit::TestCase
-  def setup
-    skip
-    @d = Loader.new.load_dir("sample")
-    @role1 = @d[:role]["role1"]
-    @roleA = @d[:role]["roleA"]
-    Postprocessor.new.postprocess(@d)
-  end
-
-  def test_scope
-    scopes = [[@roleA, "main", %w(fAmain vAmain vAmaininclude)],
-              [@roleA, "taskA", %w(fAtask1 fAtask2 vAmain vAvars)],
-              [@role1, "_ptask", %w(vAmain f1ptask)],
-              [@role1, "task2", %w(vAmain fact3)],
-              [@role1, "task1", %w(vAmain f1ptask f1task1 f1task2 var1 var2)]]
-    scopes.each {|role, tn, scope|
-      assert_not_nil role[:task][tn]
-      assert_not_nil role[:task][tn][:scope], "#{role[:name]} #{tn}"
-      assert_has_all scope, role[:task][tn][:scope].map {|v| v[:name]}, "#{role[:name]} #{tn}"
-    }
-  end
-
-  def test_var_usage
-    skip  # FIXME
-    pp = Postprocessor.new
-    up = [@roleA, @role1]
-    up.each {|role| pp.do_role(@d, role) }
-    up.each {|role| pp.calc_scope(@d, role) }
-    up.reverse.each {|role| pp.check_used_vars(@d, role) }
-
-    assert_has_all %w(var1 var1_up var2 factA varA varB), @role1[:used_vars].map {|v| v[:name] }
-    @role1[:used_vars].each {|v| assert v[:used] }
-    @role1[:used_vars].each {|v|
-      cond = v[:name] != 'var1_up'
-      assert_equal cond, v[:defined], "checking #{v[:name]}"
-    }
-    assert_has_all %w(varA varB), @roleA[:used_vars].map {|v| v[:name] }
-    @roleA[:used_vars].each {|v| assert v[:used] }
-    @roleA[:used_vars].each {|v| assert v[:defined] }
-  end
-end
 
 
 class TC_FindVars < Test::Unit::TestCase

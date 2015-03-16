@@ -9,103 +9,50 @@ require 'pp'
 class Postprocessor
   # Most 'business logic' should live here, IE calculating fancy stuff.
   # Must ensure everything grapher expects is set, even if to empty []/{}.
-  #
-  # Vars can appear:
-  #   * In role[:varset][:var], when defined in vars/
-  #   * In role[:task][:var], when defined by set_fact
-  #
-  # Also task[:scope] exists
 
-  def postprocess(dict)
-    # Sweep up, collecting defined vars onto each role;
-    # then sweep down checking all used vars are defined.
-    # This may need to be oriented around tasks not roles >.<
-
-    dict[:role].each_value {|role| do_role(dict, role) }
-
-    todo = dict[:role].values
-    bottomup = []
-    while todo.length > 0
-      role = todo.shift
-      if role[:role_deps].all? {|dep| dep[:loaded] }
-        role[:task].each_value {|t|
-          calc_scope(dict, t)
-        }
-        role[:loaded] = true
-        bottomup.push role
-      else
-        todo.push role
-      end
-    end
-    bottomup.reverse.each {|r|
-      r.delete :loaded
-      check_used_vars(dict, r)
-    }
-
-    # Oh yeah process playbooks too
-    dict[:playbook].each_value {|playbook| do_playbook(dict, playbook) }
+  def process(dict)
+    dict[:role].each {|role| do_role(dict, role) }
+    dict[:playbook].each {|playbook| do_playbook(dict, playbook) }
   end
 
   def do_role(dict, role)
     role[:role_deps] = role[:role_deps].map {|depname|
-      dep = dict[:role][depname]
+      dep = dict[:role].find {|d| d[:name] == depname }
       if dep == nil
         raise "Role '#{role[:name]}' failed to find dependency: #{depname}"
       end
       dep
     }
 
-    role[:task] ||= {}
-    role[:task].each_value {|task| do_task(dict, task) }
-    role[:varset] ||= {}
-    role[:varset].each_value {|varset| do_vars(role, varset) }
-    role[:vardefaults] ||= {}
-    role[:vardefaults].each_value {|varset| do_vars(role, varset) }
-  end
-
-  def calc_scope(dict, task)
-    # This method must be called in bottom-up dependency order.
-    role = task[:role]
-    main_vs = role[:varset]["main"]
-    role[:scope] = ((main_vs and main_vs[:var].values) or []) +
-                   role[:role_deps].flat_map {|d| d[:scope] }
-    task[:debug] = {
-      :facts => task[:var].values,
-      :role_scope => role[:scope],
-      :incl_varsets => task[:included_varsets].flat_map {|vs| vs[:var].values },
-      :incl_scopes => task[:included_tasks].flat_map {|t| t[:scope] }
-    }
-    task[:scope] = task[:debug].values.inject {|a,i| a + i }
-  end
-
-  def check_used_vars(dict, role)
-    # This method must be called in top-down dependency order.
-    # A var is used if a task from this role, or any role it depends on, refers to it
-#    role[:used_vars] = role[:used_vars].map {|varname|
-#      var = role[:defined_vars].find {|v| v[:name] == varname}
-#      if var
-#        var[:used] = true
-#        var
-#      else
-#        thing(role, :var, varname, {:role => role, :used => true, :defined => false})
-#      end
-#    }
+    role[:task] ||= []
+    role[:task].each {|task| do_task(dict, task) }
+    role[:varset] ||= []
+    role[:varset].each {|varset| do_vars(role, varset) }
+    if role[:vardefaults] != nil
+      # Consider defaults/main.yml just another source of var definitions
+      vardefaults = role[:vardefaults][0]  # there can be only one
+      vardefaults[:name] = '/vardefaults'
+      do_vars(role, vardefaults)
+      role[:varset].push vardefaults
+      role.delete :vardefaults
+    end
   end
 
   def do_vars(dict, varset)
-    varset[:var] = {}
-    varset[:data].keys.each {|varname|
+    data = varset.delete :data
+    varset[:var] = []
+    data.keys.each {|varname|
       thing(varset, :var, varname, {:used => false, :defined => true})
     }
   end
 
   def do_playbook(dict, playbook)
-    data = playbook[:data][0]
+    data = playbook.delete(:data)[0]
     playbook[:role] = (data['roles'] || []).map {|role|
       if role.instance_of? Hash
         role = role['role']
       end
-      dict[:role][role]
+      dict[:role].find {|r| r[:name] == role }
     }.uniq  # FIXME
 
     playbook[:task] = (data['tasks'] || []).map {|task_h|
@@ -114,43 +61,42 @@ class Postprocessor
         raise "Bad include from playbook #{playbook[:name]}: #{path}"
       end
       role, task = $1, $2
-      dict[:role][role][:task][task]
+      role = dict[:role].find {|r| r[:name] == role }
+      role[:task].find {|t| t[:name] == task }
     }.compact.uniq  # FIXME
   end
 
   def do_task(dict, task)
-    data = task[:data]
+    data = task.delete :data
     role = task[:role]
 
     task[:included_tasks] = data.find_all {|i|
       i.is_a? Hash and i['include']
     }.map {|i| i['include'].split(" ")[0].sub(/\.yml$/, '')
     }.map {|n|
-      t = role[:task][n]
-      if t == nil
-        puts "Failed to find #{n}"
-      end
-      t
+      role[:task].find {|t| t[:name] == n }
     }
 
     task[:included_varsets] = data.find_all {|i|
       i.is_a? Hash and i['include_vars']
     }.map {|i| i['include_vars'].split(" ")[0].sub(/\.yml$/, '')
-    }.map {|n| role[:varset][n] }
+    }.map {|n| role[:varset].find {|t| t[:name] == n } }
 
     task[:used_vars] = find_vars(data).uniq
+    # TODO control this with a flag
+    task[:used_vars] = task[:used_vars].map {|v|
+      v =~ /(.*)_update$/ and $1 or v
+    }.uniq
 
     # A fact is created by set_fact in a task. A fact defines a var for every
     # task which includes this task. Facts defined by the main task of a role
     # are defined for all tasks which include this role.
-    task[:var] = {}
-    task[:data].map {|i| i['set_fact'] }.compact.flat_map {|i|
+    data.map {|i| i['set_fact'] }.compact.flat_map {|i|
       if i.is_a? Hash
         i.keys
       else
         [i.split("=")[0]]
       end
-    }.reject {|n| 
     }.each {|n|
       used = task[:used_vars].include? n  # Just a first approximation
       thing(task, :var, n, {:role => role, :task => task, :used => used, :defined => true})
@@ -159,7 +105,7 @@ class Postprocessor
 
   def find_vars(data)
     if data.instance_of? Hash
-      data.values.flat_map {|i| find_vars(i) }
+      data.flat_map {|i| find_vars(i) }
     elsif data.is_a? Enumerable
       data.flat_map {|i| find_vars(i) }
     else
