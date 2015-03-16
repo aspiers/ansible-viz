@@ -1,0 +1,10 @@
+---
+- include_vars: extra.yml
+
+- include: taskB.yml
+
+- name: partA | Role A taskA partA
+  set_fact:
+    factAunused: "{{ defA |
+      update(varAmain | default({})) |
+      update(varAextra | default({})) }}"

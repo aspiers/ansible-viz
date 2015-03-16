@@ -1,0 +1,15 @@
+---
+- include_vars: extra.yml
+
+- include: task2.yml
+
+- name: partA | Role A taskA partA
+  doobry: "{{ defA |
+      update(varAmain | default({})) |
+      update(varAextra | default({})) }}"
+
+- name: part1 | Role 1 task1 part1
+  set_fact:
+    fact1unused: "{{ def1 |
+      update(var1main | default({})) |
+      update(var1extra | default({})) }}"
