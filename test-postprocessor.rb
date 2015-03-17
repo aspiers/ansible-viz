@@ -13,23 +13,30 @@ class TC_PostprocessorA < Test::Unit::TestCase
   def test_role
     Postprocessor.new.do_role(@d, @roleA)
 
-    assert_has_all %w(), @roleA[:role_deps].map {|d| d[:name] }
+    assert_keys @roleA, :role_deps, :task, :varset
+    assert_has_all %w(), @roleA[:role_deps].smap(:name)
+    assert_has_all %w(main taskA taskB), @roleA[:task].smap(:name)
+    assert_has_all %w(defaults main maininc extra), @roleA[:varset].smap(:name)
   end
 
   def test_task
     taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
     Postprocessor.new.do_task(@d, taskA)
 
-    assert_has_all %w(taskB), taskA[:included_tasks].map {|v| v[:name] }
-    assert_has_all %w(extra), taskA[:included_varsets].map {|v| v[:name] }
+    assert_keys taskA, :role, :included_tasks, :included_varsets, :used_vars, :var
+    assert_equal @roleA, taskA[:role]
+    assert_has_all %w(taskB), taskA[:included_tasks].smap(:name)
+    assert_has_all %w(extra), taskA[:included_varsets].smap(:name)
     assert_has_all %w(defA varAmain varAextra), taskA[:used_vars]
-    assert_has_all %w(factAunused), taskA[:var].map {|v| v[:name] }
+    assert_has_all %w(factAunused), taskA[:var].smap(:name)
   end
 
   def test_vars
     varset = @roleA[:varset].find {|vs| vs[:name] == 'extra' }
     Postprocessor.new.do_vars(@d, varset)
-    assert_has_all %w(varAextra), varset[:var].map {|v| v[:name] }
+
+    assert_keys varset, :role, :var
+    assert_has_all %w(varAextra), varset[:var].smap(:name)
     varset[:var].each {|var|
       assert !var[:used]
       assert var[:defined]
@@ -37,11 +44,12 @@ class TC_PostprocessorA < Test::Unit::TestCase
   end
 
   def test_playbookA
-    playbook = Loader.new.mk_playbook(@d, "sample", "playbookA.yml")
-    Postprocessor.new.do_playbook(@d, playbook)
+    playbookA = Loader.new.mk_playbook(@d, "sample", "playbookA.yml")
+    Postprocessor.new.do_playbook(@d, playbookA)
 
-    assert_has_all [@roleA], playbook[:role]
-    assert_has_all %w(taskA), playbook[:task].map {|t| t[:name] }
+    assert_keys playbookA, :role, :task
+    assert_has_all [@roleA], playbookA[:role]
+    assert_has_all %w(taskA), playbookA[:task].smap(:name)
   end
 end
 
@@ -56,24 +64,31 @@ class TC_Postprocessor1 < Test::Unit::TestCase
   def test_role
     Postprocessor.new.do_role(@d, @role1)
 
-    assert_has_all %w(roleA), @role1[:role_deps].map {|d| d[:name] }
+    assert_keys @role1, :role_deps, :task, :varset
+    assert_has_all %w(roleA), @role1[:role_deps].smap(:name)
+    assert_has_all %w(main task1 task2), @role1[:task].smap(:name)
+    assert_has_all %w(defaults main maininc extra), @role1[:varset].smap(:name)
   end
 
   def test_task
     task1 = @role1[:task].find {|t| t[:name] == 'task1' }
     Postprocessor.new.do_task(@d, task1)
 
-    assert_has_all %w(fact1unused), task1[:var].map {|v| v[:name] }
+    assert_keys task1, :role, :included_tasks, :included_varsets, :used_vars, :var
+    assert_equal @role1, task1[:role]
+    assert_has_all %w(fact1unused), task1[:var].smap(:name)
     assert_has_all %w(def1 var1main var1extra
                       defA varAmain varAextra), task1[:used_vars]
-    assert_has_all %w(extra), task1[:included_varsets].map {|v| v[:name] }
-    assert_has_all %w(task2), task1[:included_tasks].map {|v| v[:name] }
+    assert_has_all %w(extra), task1[:included_varsets].smap(:name)
+    assert_has_all %w(task2), task1[:included_tasks].smap(:name)
   end
 
   def test_vars
     varset = @role1[:varset].find {|vs| vs[:name] == 'extra' }
     Postprocessor.new.do_vars(@d, varset)
-    assert_has_all %w(var1extra), varset[:var].map {|v| v[:name] }
+
+    assert_keys varset, :role, :var
+    assert_has_all %w(var1extra), varset[:var].smap(:name)
     varset[:var].each {|var|
       assert !var[:used]
       assert var[:defined]
@@ -81,11 +96,12 @@ class TC_Postprocessor1 < Test::Unit::TestCase
   end
 
   def test_playbook1
-    playbook = Loader.new.mk_playbook(@d, "sample", "playbook1.yml")
-    Postprocessor.new.do_playbook(@d, playbook)
+    playbook1 = Loader.new.mk_playbook(@d, "sample", "playbook1.yml")
+    Postprocessor.new.do_playbook(@d, playbook1)
 
-    assert_has_all [@role1, @roleA], playbook[:role]
-    assert_has_all %w(task1 taskA), playbook[:task].map {|t| t[:name] }
+    assert_keys playbook1, :role, :task
+    assert_has_all [@role1, @roleA], playbook1[:role]
+    assert_has_all %w(task1 taskA), playbook1[:task].smap(:name)
   end
 end
 

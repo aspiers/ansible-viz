@@ -17,9 +17,10 @@ class Grapher
     add_nodes(g, dict)
     connect_playbooks(g, dict)
     connect_roles(g, dict)
-    hide_dull_tasks(g, dict)
 
     decorate(g, dict, options)
+
+    hide_dull_tasks(g, dict)
 
     if not options.show_vars
       to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
@@ -29,42 +30,43 @@ class Grapher
     g
   end
 
+  def add_node(g, it)
+    node = GNode[it[:name]]
+    node.data = it
+    it[:node] = node
+    g.add(node)
+  end
+
   def add_nodes(g, dict)
     dict[:role].each {|role|
       add_node(g, role)
-      role[:task].each {|task| add_node(g, task, task[:role]) }
+      role[:task].each {|task|
+        add_node(g, task)
+        task[:var].each {|var| add_node(g, var) }
+      }
       role[:varset].each {|vs|
-        vs[:var].each {|v| add_node(g, v, vs) }
+        add_node(g, vs)
+        vs[:var].each {|v| add_node(g, v) }
       }
     }
     dict[:playbook].each {|playbook|
       add_node(g, playbook)
-      playbook[:role].each {|role| add_node(g, role) }
-      playbook[:task].each {|task| add_node(g, task, task[:role]) }
+      # Roles and tasks should already have nodes
     }
   end
 
-  def add_node(g, it, parent=nil)
-    name = it[:name]
-    if parent
-      name = parent[:name] + "::" + name
-    end
-    node = g.get_or_make(name)
-    node.data = it
-    it[:node] = node
-    node[:label] = it[:name]
+  def add_edge(g, src, dst, tooltip, extra={})
+    g.add GEdge[src[:node], dst[:node], {:tooltip => tooltip}.merge(extra)]
   end
 
   def connect_playbooks(g, dict)
     dict[:playbook].each {|playbook|
       (playbook[:role] || []).each {|role|
-        g.add GEdge[playbook[:node], role[:node],
-          {:tooltip => "includes"}]
+        add_edge(g, playbook, role, "includes")
       }
       (playbook[:task] || []).each {|task|
-        g.add GEdge[playbook[:node], task[:node],
-          {:style => 'dashed', :color => 'blue',
-           :tooltip => "calls task"}]
+        add_edge(g, playbook, task, "calls task",
+          {:style => 'dashed', :color => 'blue'})
       }
     }
   end
@@ -72,38 +74,51 @@ class Grapher
   def connect_roles(g, dict)
     dict[:role].each {|role|
       (role[:role_deps] || []).each {|dep|
-        g.add GEdge[role[:node], dep[:node],
-          {:color => 'hotpink',
-           :tooltip => "calls foreign task"}]
+        add_edge(g, role, dep, "calls foreign task",
+          {:color => 'red'})
       }
 
-      (role[:task] || []).each {|task|
-        g.add GEdge[role[:node], task[:node],
-          {:tooltip => "calls task"}]
+      role[:task].each {|task|
+        add_edge(g, role, task, "calls task")
+        task[:var].each {|var|
+          add_edge(g, task, var, "sets fact")
+        }
 
 #        (task[:used_vars] || []).each {|var|
-#          g.add GEdge[task[:node], var[:node],
-#            {:style => 'dotted',
-#             :tooltip => "uses var"}]
+#          add_edge(g, task, var, "uses var",
+#            {:style => 'dotted'})
 #        }
       }
 
       (role[:varset] || []).each {|vs|
+        is_main = false  #vs[:name] == 'main'
+        add_edge(g, role, vs, "defines var") unless is_main
         vs[:var].each {|v|
-          g.add GEdge[role[:node], v[:node],
-            {:tooltip => "provides var"}]
+          add_edge(g, (is_main and role or vs), v, "defines var")
         }
       }
     }
   end
 
   def hide_dull_tasks(g, dict)
-    dict[:role].each {|r|
-      hide_tasks = r[:task].each.find_all {|it|
-        it[:name] =~ /^_|^main$/
-      }.map {|it| it[:node] }
-      g.lowercut(*hide_tasks)
+    g.nodes.find_all {|n|
+      n.data[:name] == 'main' or n.data[:type] == :vardefaults
+    }.each {|n|
+      if n.inc_nodes.length != 1
+        raise "help"
+      end
+      inc_node = n.inc_nodes.to_a[0]
+      n.out.each {|e| e.snode = inc_node }
+      n.out = Set[]
+      g.cut n
     }
+
+#    dict[:role].each {|r|
+#      hide_tasks = r[:task].each.find_all {|it|
+#        it[:name] =~ /^_/
+#      }.map {|it| it[:node] }
+#      g.lowercut(*hide_tasks)
+#    }
   end
 
 
@@ -134,21 +149,38 @@ class Grapher
 #    }
   end
 
+  def hsl(h, s, l)
+    [h, s, l].map {|i| i / 100.0 }.join("+")
+  end
+
   def decorate_nodes(g, dict, options)
-    types = {:playbook => {:shape => 'folder', :fillcolor => 'cornflowerblue'},
-             :role => {:shape => 'house', :fillcolor => 'palegreen'},
-             :task => {:shape => 'octagon', :fillcolor => 'cornsilk'},
-             :var => {:shape => 'oval', :fillcolor => 'white'}}
+    types = {:playbook => {:shape => 'folder', :fillcolor => hsl(66, 8, 100)},
+             :role => {:shape => 'house', :fillcolor => hsl(66, 24, 100)},
+             :task => {:shape => 'octagon', :fillcolor => hsl(66, 40, 100)},
+             :varset => {:shape => 'box3d', :fillcolor => hsl(33, 8, 100)},
+             :var => {:shape => 'oval', :fillcolor => hsl(33, 60, 80)}}
     g.nodes.each {|node|
       type = node.data[:type]
+      type = :varset if type == :vardefaults
       types[type].each_pair {|k,v| node[k] = v }
       node[:style] = 'filled'
       node[:tooltip] = type.to_s.capitalize
+
       case type
       when :task  # FIXME , :var
         node[:tooltip] += " #{node.data[:role][:name]}::#{node.data[:name]}"
       else
         node[:tooltip] += " " + node.data[:name]
+      end
+
+      case type
+      when :var
+        if node.inc_nodes.all? {|n| n.data[:type] == :task }
+          node[:fillcolor] = hsl(33, 70, 100)
+        elsif node.inc_nodes.all? {|n| n.data[:type] == :vardefaults }
+          node[:fillcolor] = hsl(33, 90, 60)
+          node[:fontcolor] = hsl(0, 0, 100)
+        end
       end
     }
   end
@@ -158,7 +190,7 @@ end
 def rank_node(node)
   case node.data[:type]
   when :playbook then :source
-  when :task then :same
+  when :task, :varset then :same
   when :var then :sink
   end
 end

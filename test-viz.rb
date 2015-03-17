@@ -12,6 +12,16 @@ def assert_has_all(e, a, m="")
   assert_equal [[], []], [missing, extra], "#{m}missing/extra items"
 end
 
+def assert_keys(it, *keys)
+  assert_has_all [:type, :name] + keys, it.keys
+end
+
+module Enumerable
+  def smap(sym)
+    map {|i| i[sym] }
+  end
+end
+
 require 'simplecov'
 SimpleCov.start do
   add_filter "/test"

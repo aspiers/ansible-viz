@@ -30,8 +30,9 @@ class Postprocessor
     role[:varset].each {|varset| do_vars(role, varset) }
     if role[:vardefaults] != nil
       # Consider defaults/main.yml just another source of var definitions
+      # Note the type is still :vardefaults
       vardefaults = role[:vardefaults][0]  # there can be only one
-      vardefaults[:name] = '/vardefaults'
+      vardefaults[:name] = 'defaults'
       do_vars(role, vardefaults)
       role[:varset].push vardefaults
       role.delete :vardefaults
@@ -40,8 +41,7 @@ class Postprocessor
 
   def do_vars(dict, varset)
     data = varset.delete :data
-    varset[:var] = []
-    data.keys.each {|varname|
+    varset[:var] = data.keys.map {|varname|
       thing(varset, :var, varname, {:used => false, :defined => true})
     }
   end
@@ -91,13 +91,15 @@ class Postprocessor
     # A fact is created by set_fact in a task. A fact defines a var for every
     # task which includes this task. Facts defined by the main task of a role
     # are defined for all tasks which include this role.
-    data.map {|i| i['set_fact'] }.compact.flat_map {|i|
+    task[:var] = data.map {|i|
+      i['set_fact']
+    }.compact.flat_map {|i|
       if i.is_a? Hash
         i.keys
       else
         [i.split("=")[0]]
       end
-    }.each {|n|
+    }.map {|n|
       used = task[:used_vars].include? n  # Just a first approximation
       thing(task, :var, n, {:role => role, :task => task, :used => used, :defined => true})
     }

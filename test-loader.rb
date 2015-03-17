@@ -30,13 +30,13 @@ class TC_Loader < Test::Unit::TestCase
     d = {}
     role = Loader.new.mk_role(d, "sample/roles", "role1")
 
-    assert_has_all %w(maininc extra main), role[:varset].map {|vs| vs[:name] }
+    assert_has_all %w(maininc extra main), role[:varset].smap(:name)
     role.delete(:varset)
 
-    assert_has_all %w(main), role[:vardefaults].map {|vs| vs[:name] }
+    assert_has_all %w(main), role[:vardefaults].smap(:name)
     role.delete(:vardefaults)
 
-    assert_has_all %w(main task1 task2), role[:task].map {|t| t[:name] }
+    assert_has_all %w(main task1 task2), role[:task].smap(:name)
     role.delete(:task)
 
     expect = thing({}, :role, "role1", {:role_deps => ["roleA"]})
