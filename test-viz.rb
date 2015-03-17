@@ -20,6 +20,9 @@ module Enumerable
   def smap(sym)
     map {|i| i[sym] }
   end
+  def flat_smap(sym)
+    flat_map {|i| i[sym] }
+  end
 end
 
 require 'simplecov'

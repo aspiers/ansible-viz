@@ -9,10 +9,13 @@ require 'ostruct'
 require 'pp'
 
 
-def thing(dict, type, name, extra = {})
+def thing(parent, type, name, extra = {})
   it = {:type => type, :name => name}.merge(extra)
-  dict[type] ||= []
-  dict[type].push it
+  if parent[:type] != nil
+    it.merge!({:parent => parent})
+  end
+  parent[type] ||= []
+  parent[type].push it
   it
 end
 
@@ -86,19 +89,19 @@ class Loader
   def mk_varset(role, path, file)
     name = file.sub(/.yml$/, '')
     data = Loader.yaml_slurp(path, file) || {}
-    thing(role, :varset, name, {:role => role, :data => data})
+    thing(role, :varset, name, {:data => data})
   end
 
   def mk_vardefaults(role, path, file)
     name = file.sub(/.yml$/, '')
     data = Loader.yaml_slurp(path, file) || {}
-    thing(role, :vardefaults, name, {:role => role, :data => data})
+    thing(role, :vardefaults, name, {:data => data})
   end
 
   def mk_task(role, path, file)
     name = file.sub(/.yml$/, '')
     data = Loader.yaml_slurp(path, file) || []
-    thing(role, :task, name, {:role => role, :data => data})
+    thing(role, :task, name, {:data => data})
   end
 
   def mk_playbook(dict, path, file)

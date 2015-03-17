@@ -23,11 +23,10 @@ class TC_PostprocessorA < Test::Unit::TestCase
     taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
     Postprocessor.new.do_task(@d, taskA)
 
-    assert_keys taskA, :role, :included_tasks, :included_varsets, :used_vars, :var
-    assert_equal @roleA, taskA[:role]
+    assert_keys taskA, :data, :parent, :included_tasks, :included_varsets, :var
+    assert_equal @roleA, taskA[:parent]
     assert_has_all %w(taskB), taskA[:included_tasks].smap(:name)
     assert_has_all %w(extra), taskA[:included_varsets].smap(:name)
-    assert_has_all %w(defA varAmain varAextra), taskA[:used_vars]
     assert_has_all %w(factAunused), taskA[:var].smap(:name)
   end
 
@@ -35,7 +34,7 @@ class TC_PostprocessorA < Test::Unit::TestCase
     varset = @roleA[:varset].find {|vs| vs[:name] == 'extra' }
     Postprocessor.new.do_vars(@d, varset)
 
-    assert_keys varset, :role, :var
+    assert_keys varset, :data, :parent, :var
     assert_has_all %w(varAextra), varset[:var].smap(:name)
     varset[:var].each {|var|
       assert !var[:used]
@@ -47,7 +46,7 @@ class TC_PostprocessorA < Test::Unit::TestCase
     playbookA = Loader.new.mk_playbook(@d, "sample", "playbookA.yml")
     Postprocessor.new.do_playbook(@d, playbookA)
 
-    assert_keys playbookA, :role, :task
+    assert_keys playbookA, :data, :role, :task
     assert_has_all [@roleA], playbookA[:role]
     assert_has_all %w(taskA), playbookA[:task].smap(:name)
   end
@@ -74,11 +73,9 @@ class TC_Postprocessor1 < Test::Unit::TestCase
     task1 = @role1[:task].find {|t| t[:name] == 'task1' }
     Postprocessor.new.do_task(@d, task1)
 
-    assert_keys task1, :role, :included_tasks, :included_varsets, :used_vars, :var
-    assert_equal @role1, task1[:role]
+    assert_keys task1, :data, :parent, :included_tasks, :included_varsets, :var
+    assert_equal @role1, task1[:parent]
     assert_has_all %w(fact1unused), task1[:var].smap(:name)
-    assert_has_all %w(def1 var1main var1extra
-                      defA varAmain varAextra), task1[:used_vars]
     assert_has_all %w(extra), task1[:included_varsets].smap(:name)
     assert_has_all %w(task2), task1[:included_tasks].smap(:name)
   end
@@ -87,7 +84,7 @@ class TC_Postprocessor1 < Test::Unit::TestCase
     varset = @role1[:varset].find {|vs| vs[:name] == 'extra' }
     Postprocessor.new.do_vars(@d, varset)
 
-    assert_keys varset, :role, :var
+    assert_keys varset, :data, :parent, :var
     assert_has_all %w(var1extra), varset[:var].smap(:name)
     varset[:var].each {|var|
       assert !var[:used]
@@ -99,44 +96,8 @@ class TC_Postprocessor1 < Test::Unit::TestCase
     playbook1 = Loader.new.mk_playbook(@d, "sample", "playbook1.yml")
     Postprocessor.new.do_playbook(@d, playbook1)
 
-    assert_keys playbook1, :role, :task
+    assert_keys playbook1, :data, :role, :task
     assert_has_all [@role1, @roleA], playbook1[:role]
     assert_has_all %w(task1 taskA), playbook1[:task].smap(:name)
-  end
-end
-
-
-
-class TC_FindVars < Test::Unit::TestCase
-  def try(expect, input)
-    assert_equal expect, Postprocessor.new.find_vars(input)
-  end
-
-  def test_str
-    try %w(def), "abc {{def}} ghi"
-  end
-
-  def test_list
-    try %w(1 2), ["{{1}}", "{{2}}"]
-  end
-
-  def test_hash
-    try %w(1 2), {:a => "{{1}}", :b => "{{2}}"}
-  end
-
-  def test_nesting
-    try %w(1 2 3), {:a => ["{{1}}", "{{2}}"], :b => "{{3}}"}
-  end
-
-  def test_bar
-    try %w(1 2), "{{1|up(2)}}"
-  end
-
-  def test_stdout
-    try [], "{{1.stdout}}"
-  end
-
-  def test_complex
-    try %w(1 2), "{{1 | up(2 | default({}))}}"
   end
 end

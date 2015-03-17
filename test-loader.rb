@@ -44,29 +44,30 @@ class TC_Loader < Test::Unit::TestCase
   end
 
   def test_varset
-    d = {:name => "roleX"}
-    varset = Loader.new.mk_varset(d, "sample/roles/role1/vars", "main.yml")
+    d = {}
+    role = thing(d, :role, "role")
+    varset = Loader.new.mk_varset(role, "sample/roles/role1/vars", "main.yml")
 
     varset.delete :data
-    expect = thing({}, :varset, "main", {:role => d})
+    expect = thing(thing({}, :role, "role"), :varset, "main", {:parent => d})
     assert_equal expect, varset
   end
 
   def test_vardefaults
-    d = {:name => "roleX"}
-    vardefaults = Loader.new.mk_vardefaults(d, "sample/roles/role1/defaults", "main.yml")
+    role = thing({}, :role, "role")
+    vardefaults = Loader.new.mk_vardefaults(role, "sample/roles/role1/defaults", "main.yml")
 
     vardefaults.delete :data
-    expect = thing({}, :vardefaults, "main", {:role => d})
+    expect = thing(thing({}, :role, "role"), :vardefaults, "main")
     assert_equal expect, vardefaults
   end
 
   def test_task
-    d = {:name => "roleX"}
-    task = Loader.new.mk_task(d, "sample/roles/role1/tasks", "task1.yml")
+    role = thing({}, :role, "role")
+    task = Loader.new.mk_task(role, "sample/roles/role1/tasks", "task1.yml")
 
     task.delete(:data)
-    expect = thing({}, :task, "task1", {:role=>d})
+    expect = thing(thing({}, :role, "role"), :task, "task1")
     assert_equal expect, task
   end
 

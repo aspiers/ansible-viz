@@ -40,14 +40,14 @@ class Postprocessor
   end
 
   def do_vars(dict, varset)
-    data = varset.delete :data
+    data = varset[:data]
     varset[:var] = data.keys.map {|varname|
-      thing(varset, :var, varname, {:used => false, :defined => true})
+      thing(varset, :var, varname, {:defined => true})
     }
   end
 
   def do_playbook(dict, playbook)
-    data = playbook.delete(:data)[0]
+    data = playbook[:data][0]
     playbook[:role] = (data['roles'] || []).map {|role|
       if role.instance_of? Hash
         role = role['role']
@@ -67,8 +67,8 @@ class Postprocessor
   end
 
   def do_task(dict, task)
-    data = task.delete :data
-    role = task[:role]
+    data = task[:data]
+    role = task[:parent]
 
     task[:included_tasks] = data.find_all {|i|
       i.is_a? Hash and i['include']
@@ -82,12 +82,6 @@ class Postprocessor
     }.map {|i| i['include_vars'].split(" ")[0].sub(/\.yml$/, '')
     }.map {|n| role[:varset].find {|t| t[:name] == n } }
 
-    task[:used_vars] = find_vars(data).uniq
-    # TODO control this with a flag
-    task[:used_vars] = task[:used_vars].map {|v|
-      v =~ /(.*)_update$/ and $1 or v
-    }.uniq
-
     # A fact is created by set_fact in a task. A fact defines a var for every
     # task which includes this task. Facts defined by the main task of a role
     # are defined for all tasks which include this role.
@@ -100,36 +94,7 @@ class Postprocessor
         [i.split("=")[0]]
       end
     }.map {|n|
-      used = task[:used_vars].include? n  # Just a first approximation
-      thing(task, :var, n, {:role => role, :task => task, :used => used, :defined => true})
+      thing(task, :var, n, {:defined => true})
     }
-  end
-
-  def find_vars(data)
-    if data.instance_of? Hash
-      data.flat_map {|i| find_vars(i) }
-    elsif data.is_a? Enumerable
-      data.flat_map {|i| find_vars(i) }
-    else
-      # This really needs a proper parser
-      fns = %w(join int item dirname basename regex_replace)
-      data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
-        map {|s|
-          os = nil
-          while os != s
-            os = s
-            s = s.gsub(/\w+\((.*?)\)/, '\1')
-          end
-          s
-        }.
-        flat_map {|s| s.split("|") }.
-        reject {|s| s =~ /\w+\.stdout/ }.
-        map {|s| s.split(".")[0] }.
-        map {|s| s.split("[")[0] }.
-        map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
-        map {|s| s.strip }.
-        reject {|s| fns.include? s }.
-        reject {|s| s.empty? }
-    end
   end
 end

@@ -20,7 +20,7 @@ class Grapher
 
     decorate(g, dict, options)
 
-    hide_dull_tasks(g, dict)
+    hide_dullness(g, dict)
 
     if not options.show_vars
       to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
@@ -30,8 +30,21 @@ class Grapher
     g
   end
 
+  def collect_parents(it)
+    case it[:type]
+    when :playbook, :role
+      return [it]
+    end
+    if it[:parent] == nil
+      pp it
+    end
+    collect_parents(it[:parent]) + [it]
+  end
+
   def add_node(g, it)
-    node = GNode[it[:name]]
+    fqn = collect_parents(it)
+    fqn = fqn.map {|i| i[:name] }.join("::")
+    node = GNode[fqn]
     node.data = it
     it[:node] = node
     g.add(node)
@@ -56,6 +69,11 @@ class Grapher
   end
 
   def add_edge(g, src, dst, tooltip, extra={})
+    if src[:node] == nil
+      raise "Bad src: #{src[:name]}"
+    elsif dst[:node] == nil
+      raise "Bad dst: #{dst[:name]}"
+    end
     g.add GEdge[src[:node], dst[:node], {:tooltip => tooltip}.merge(extra)]
   end
 
@@ -100,14 +118,12 @@ class Grapher
     }
   end
 
-  def hide_dull_tasks(g, dict)
+  def hide_dullness(g, dict)
+    # Given a>main>c, produce a>c
     g.nodes.find_all {|n|
       n.data[:name] == 'main' or n.data[:type] == :vardefaults
     }.each {|n|
-      if n.inc_nodes.length != 1
-        raise "help"
-      end
-      inc_node = n.inc_nodes.to_a[0]
+      inc_node = n.inc_nodes[0]
       n.out.each {|e| e.snode = inc_node }
       n.out = Set[]
       g.cut n
@@ -160,18 +176,15 @@ class Grapher
              :varset => {:shape => 'box3d', :fillcolor => hsl(33, 8, 100)},
              :var => {:shape => 'oval', :fillcolor => hsl(33, 60, 80)}}
     g.nodes.each {|node|
-      type = node.data[:type]
+      data = node.data
+      type = data[:type]
       type = :varset if type == :vardefaults
       types[type].each_pair {|k,v| node[k] = v }
+      node[:label] = data[:name]
       node[:style] = 'filled'
-      node[:tooltip] = type.to_s.capitalize
-
-      case type
-      when :task  # FIXME , :var
-        node[:tooltip] += " #{node.data[:role][:name]}::#{node.data[:name]}"
-      else
-        node[:tooltip] += " " + node.data[:name]
-      end
+      fqn = collect_parents(data)
+      fqn = fqn.map {|i| i[:name] }.join("::")
+      node[:tooltip] = "#{type.to_s.capitalize} #{fqn}"
 
       case type
       when :var

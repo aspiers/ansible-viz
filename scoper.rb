@@ -21,33 +21,81 @@ class Scoper
     # then sweep down checking all used vars are defined.
     # This may need to be oriented around tasks not roles >.<
 
-    return
+    find_var_usages(dict)
 
-    todo = dict[:role]
-    bottomup = []
-    while todo.length > 0
-      role = todo.shift
-      if role[:role_deps].all? {|dep| dep[:loaded] }
-        role[:task].each {|t|
-          calc_scope(dict, t)
-        }
-        role[:loaded] = true
-        bottomup.push role
-      else
-        todo.push role
-      end
-    end
+    bottomup = dep_order(dict[:role])
+    bottomup.each {|role|
+      role[:task].each {|t|
+        calc_scope(dict, t)
+      }
+    }
     bottomup.reverse.each {|r|
       r.delete :loaded
       check_used_vars(dict, r)
     }
   end
 
+  def find_var_usages(dict)
+    dict[:role].each {|role|
+      role[:task].each {|task|
+        task[:used_vars] = find_vars(task[:data]).uniq
+        # TODO control this with a flag
+        task[:used_vars] = task[:used_vars].map {|v|
+          v =~ /(.*)_update$/ and $1 or v
+        }.uniq
+      }
+    }
+  end
+
+  def find_vars(data)
+    if data.instance_of? Hash
+      data.flat_map {|i| find_vars(i) }
+    elsif data.is_a? Enumerable
+      data.flat_map {|i| find_vars(i) }
+    else
+      # This really needs a proper parser
+      fns = %w(join int item dirname basename regex_replace)
+      data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
+        map {|s|
+          os = nil
+          while os != s
+            os = s
+            s = s.gsub(/\w+\((.*?)\)/, '\1')
+          end
+          s
+        }.
+        flat_map {|s| s.split("|") }.
+        reject {|s| s =~ /\w+\.stdout/ }.
+        map {|s| s.split(".")[0] }.
+        map {|s| s.split("[")[0] }.
+        map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
+        map {|s| s.strip }.
+        reject {|s| fns.include? s }.
+        reject {|s| s.empty? }
+    end
+  end
+
+  def dep_order(roles)
+    todo = roles.dup
+    bottomup = []
+    while todo.length > 0
+      role = todo.shift
+      if role[:role_deps].all? {|dep| dep[:loaded] }
+        role[:loaded] = true
+        bottomup.push role
+      else
+        todo.push role
+      end
+    end
+    bottomup.each {|r| r.delete :loaded }
+  end
+
   def calc_scope(dict, task)
     # This method must be called in bottom-up dependency order.
-    role = task[:role]
-    main_vs = role[:varset]["main"]
-    role[:scope] = ((main_vs and main_vs[:var]) or []) +
+    role = task[:parent]
+    main_vs = role[:varset].find {|vs| vs[:name] == 'main' } || {:var => []}
+    vardefaults = role[:varset].find {|vs| vs[:type] == :vardefaults } || {:var => []}
+    role[:scope] = main_vs[:var] + vardefaults[:var] +
                    role[:role_deps].flat_map {|d| d[:scope] }
     task[:debug] = {
       :facts => task[:var],
@@ -55,7 +103,7 @@ class Scoper
       :incl_varsets => task[:included_varsets].flat_map {|vs| vs[:var] },
       :incl_scopes => task[:included_tasks].flat_map {|t| t[:scope] }
     }
-    task[:scope] = task[:debug].inject {|a,i| a + i }
+    task[:scope] = task[:debug].values.inject {|a,i| a + i }
   end
 
   def check_used_vars(dict, role)
