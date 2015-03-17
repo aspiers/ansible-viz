@@ -1,8 +1,6 @@
 ---
 - include_vars: extra.yml
 
-- include: taskB.yml
-
 - name: partA | Role A taskA partA
   set_fact:
     factAunused: "{{ defA | factB |

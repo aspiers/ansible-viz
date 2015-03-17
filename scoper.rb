@@ -80,13 +80,22 @@ class Scoper
     # Dependency orders list
     todo = list.dup
     order = []
+    safe = 0
     while todo.length > 0
       item = todo.shift
-      if yield(item).all? {|dep| dep[:loaded] }
+      deps = yield(item)
+      if deps.all? {|dep| dep[:loaded] }
         item[:loaded] = true
         order.push item
       else
+#        parent = item[:parent] || {:name => '???'}
+#        puts "Failed to process #{parent[:name]}::#{item[:name]}, deps: " + deps.map {|it| it[:name] }.join(" ")
         todo.push item
+      end
+      safe += 1
+      if safe > 100
+        oops = todo.map {|it| it[:name] }.join(" ")
+        raise "oops: #{oops}"
       end
     end
     order.each {|i| i.delete :loaded }
@@ -97,10 +106,13 @@ class Scoper
     roles = order_list(roles) {|role| role[:role_deps] }
     roles.flat_map {|role|
       order_list(role[:task]) {|task|
-        main_task = if task[:name] == 'main' then []
-                    else task[:parent][:task].find_all {|t| t[:name] == 'main' }
-                    end
-        task[:included_tasks] + main_task
+        incl_tasks = task[:included_tasks].dup
+        # :used_by_main is a pretty awful hack to break a circular scope dependency
+        if task == task[:main_task]
+          task[:included_tasks].each {|t| t[:used_by_main] == true }
+        elsif not task[:used_by_main]
+          incl_tasks += (task[:main_task] || [])
+        end
       }
     }
   end
@@ -108,23 +120,25 @@ class Scoper
   def calc_scope(dict, task)
     # This method must be called in bottom-up dependency order.
     role = task[:parent]
-    if task[:name] == 'main'
+    if role[:scope] == nil
       main_vs = role[:varset].find {|vs| vs[:name] == 'main' } || {:var => []}
       vardefaults = role[:varset].find {|vs| vs[:type] == :vardefaults } || {:var => []}
-      role_scope = main_vs[:var] + vardefaults[:var] +
+      # role[:scope] should really only be set after the main task has been handled.
+      # main can include other tasks though, so to break the circular dependency, allow
+      # a partial role[:scope] of just the vars, defaults and dependent roles' scopes.
+      role[:scope] = main_vs[:var] + vardefaults[:var] +
                      role[:role_deps].flat_map {|d| d[:scope] }
-    else
-      role_scope = role[:scope]
     end
-    # Must be in ascending precedence order
+    # This list must be in ascending precedence order
     task[:debug] = {
       :incl_varsets => task[:included_varsets].flat_map {|vs| vs[:var] },
       :incl_scopes => task[:included_tasks].flat_map {|t| t[:scope] },
-      :role_scope => role_scope,
+      :role_scope => role[:scope],
       :facts => task[:var]
     }
     task[:scope] = task[:debug].values.inject {|a,i| a + i }
-    if task[:name] == 'main'
+    if task == role[:main_task]
+      # update the role[:scope] so it has the full picture
       role[:scope] = task[:scope]
     end
   end
@@ -140,6 +154,8 @@ class Scoper
       end
       var[:used] ||= []
       var[:used].push task
+      task[:uses] ||= Set[]
+      task[:uses].add var
     }
   end
 end

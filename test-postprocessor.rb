@@ -13,10 +13,21 @@ class TC_PostprocessorA < Test::Unit::TestCase
   def test_role
     Postprocessor.new.do_role(@d, @roleA)
 
-    assert_keys @roleA, :role_deps, :task, :varset
+    assert_keys @roleA, :role_deps, :task, :main_task, :varset
     assert_has_all %w(), @roleA[:role_deps].smap(:name)
     assert_has_all %w(main taskA taskB), @roleA[:task].smap(:name)
     assert_has_all %w(defaults main maininc extra), @roleA[:varset].smap(:name)
+  end
+
+  def test_main
+    main = @roleA[:task].find {|t| t[:name] == 'main' }
+    Postprocessor.new.do_task(@d, main)
+
+    assert_keys main, :data, :parent, :included_tasks, :included_varsets, :var
+    assert_equal @roleA, main[:parent]
+    assert_has_all %w(taskB), main[:included_tasks].smap(:name)
+    assert_has_all %w(maininc), main[:included_varsets].smap(:name)
+    assert_has_all %w(factAmain), main[:var].smap(:name)
   end
 
   def test_task
@@ -25,7 +36,7 @@ class TC_PostprocessorA < Test::Unit::TestCase
 
     assert_keys taskA, :data, :parent, :included_tasks, :included_varsets, :var
     assert_equal @roleA, taskA[:parent]
-    assert_has_all %w(taskB), taskA[:included_tasks].smap(:name)
+    assert_has_all %w(), taskA[:included_tasks].smap(:name)
     assert_has_all %w(extra), taskA[:included_varsets].smap(:name)
     assert_has_all %w(factAunused), taskA[:var].smap(:name)
   end
@@ -63,10 +74,21 @@ class TC_Postprocessor1 < Test::Unit::TestCase
   def test_role
     Postprocessor.new.do_role(@d, @role1)
 
-    assert_keys @role1, :role_deps, :task, :varset
+    assert_keys @role1, :role_deps, :task, :main_task, :varset
     assert_has_all %w(roleA), @role1[:role_deps].smap(:name)
     assert_has_all %w(main task1 task2), @role1[:task].smap(:name)
     assert_has_all %w(defaults main maininc extra), @role1[:varset].smap(:name)
+  end
+
+  def test_main
+    main = @role1[:task].find {|t| t[:name] == 'main' }
+    Postprocessor.new.do_task(@d, main)
+
+    assert_keys main, :data, :parent, :included_tasks, :included_varsets, :var
+    assert_equal @role1, main[:parent]
+    assert_has_all %w(task2), main[:included_tasks].smap(:name)
+    assert_has_all %w(maininc), main[:included_varsets].smap(:name)
+    assert_has_all %w(fact1main), main[:var].smap(:name)
   end
 
   def test_task
@@ -77,7 +99,7 @@ class TC_Postprocessor1 < Test::Unit::TestCase
     assert_equal @role1, task1[:parent]
     assert_has_all %w(fact1unused), task1[:var].smap(:name)
     assert_has_all %w(extra), task1[:included_varsets].smap(:name)
-    assert_has_all %w(task2), task1[:included_tasks].smap(:name)
+    assert_has_all %w(), task1[:included_tasks].smap(:name)
   end
 
   def test_vars

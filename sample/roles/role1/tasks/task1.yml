@@ -1,8 +1,6 @@
 ---
 - include_vars: extra.yml
 
-- include: task2.yml
-
 - name: partA | Role A taskA partA
   doobry: "{{ defA | factB |
       update(varAmain | default({})) |

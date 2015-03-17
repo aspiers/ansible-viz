@@ -10,11 +10,11 @@ roleA/vars/extra.yml
     Sets varAextra.
 roleA/tasks/main
     Includes vars from maininc.yml
+    Includes taskB.
     Sets + uses factAmain.
     Uses defA, varAmain, varAmaininc, varAundef (UNDEFINED).
 roleA/tasks/taskA
     Includes vars from extra.yml
-    Includes taskB.
     Sets factAunused (UNUSED).
     Uses defA, varAmain, varAextra, factB.
 roleA/tasks/taskB

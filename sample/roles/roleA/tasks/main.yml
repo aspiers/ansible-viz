@@ -1,6 +1,8 @@
 ---
 - include_vars: maininc.yml
 
+- include: taskB.yml
+
 - name: main | Role A main
   set_fact:
     factAmain: "{{ defA |

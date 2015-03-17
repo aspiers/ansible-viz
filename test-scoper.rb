@@ -65,20 +65,22 @@ class TC_Scoper < Test::Unit::TestCase
   end
 
   def test_order_tasks
-    expect = %w(main taskB taskA main task2 task1)
+    expect = %w(taskB main taskA task2 main task1)
     assert_equal expect, @s.order_tasks([@role1, @roleA]).smap(:name)
     assert_equal expect, @s.order_tasks([@roleA, @role1]).smap(:name)
   end
 
   def test_scope
     @s.process(@d)
-    mainA = %w(defA varAmain varAmaininc factAmain)
-    main1 = mainA + %w(def1 var1main var1maininc fact1main)
-    scopes = [[@roleA, "main", mainA],
-              [@roleA, "taskB", mainA + %w(factB)],
+    mainApre = %w(defA varAmain factB)
+    mainA = mainApre + %w(varAmaininc factAmain)
+    main1pre = mainA + %w(def1 var1main fact2)
+    main1 = main1pre + %w(var1maininc fact1main)
+    scopes = [[@roleA, "taskB", mainApre + %w(factB)],
+              [@roleA, "main", mainA],
               [@roleA, "taskA", mainA + %w(varAextra factB factAunused)],
+              [@role1, "task2", main1pre + %w(fact2)],
               [@role1, "main", main1],
-              [@role1, "task2", main1 + %w(fact2)],
               [@role1, "task1", main1 + %w(var1extra fact2 fact1unused)]]
     scopes.each {|role, tn, scope|
       task = role[:task].find {|t| t[:name] == tn }
@@ -91,6 +93,6 @@ class TC_Scoper < Test::Unit::TestCase
   def test_var_usage
     @s.process(@d)
 
-    assert_has_all %w(varAmain factAmain varAmaininc defA), @roleA[:scope].smap(:name)
+#    task_by_name = Hash[*(task[:scope].flat_map {|v| [v[:name], v] })]
   end
 end

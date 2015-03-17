@@ -1,6 +1,8 @@
 ---
 - include_vars: maininc.yml
 
+- include: task2.yml
+
 - name: part1 | Role 1 main
   blah: "{{ factAmain | defA |
       update(varAmain | default({})) |

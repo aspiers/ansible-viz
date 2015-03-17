@@ -26,6 +26,8 @@ class Postprocessor
 
     role[:task] ||= []
     role[:task].each {|task| do_task(dict, task) }
+    role[:main_task] = role[:task].find {|task| task[:name] == 'main' }
+
     role[:varset] ||= []
     role[:varset].each {|varset| do_vars(role, varset) }
     if role[:vardefaults] != nil

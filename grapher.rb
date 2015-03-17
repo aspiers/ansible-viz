@@ -17,6 +17,7 @@ class Grapher
     add_nodes(g, dict)
     connect_playbooks(g, dict)
     connect_roles(g, dict)
+    connect_usage(g, dict)
 
     decorate(g, dict, options)
 
@@ -99,13 +100,10 @@ class Grapher
       role[:task].each {|task|
         add_edge(g, role, task, "calls task")
         task[:var].each {|var|
-          add_edge(g, task, var, "sets fact")
+          if var[:defined]
+            add_edge(g, task, var, "sets fact")
+          end
         }
-
-#        (task[:used_vars] || []).each {|var|
-#          add_edge(g, task, var, "uses var",
-#            {:style => 'dotted'})
-#        }
       }
 
       (role[:varset] || []).each {|vs|
@@ -113,6 +111,20 @@ class Grapher
         add_edge(g, role, vs, "defines var") unless is_main
         vs[:var].each {|v|
           add_edge(g, (is_main and role or vs), v, "defines var")
+        }
+      }
+    }
+  end
+
+  def connect_usage(g, dict)
+    dict[:role].each {|role|
+      role[:task].each {|task|
+        (task[:uses] || []).each {|var|
+          if not var[:defined] or
+              not g.edges.any? {|e| [e.snode, e.dnode] == [task[:node], var[:node]] }
+            add_edge(g, task, var, "uses var",
+                     {:color => 'lightgrey', :tooltip => 'uses var'})
+          end
         }
       }
     }
@@ -128,13 +140,6 @@ class Grapher
       n.out = Set[]
       g.cut n
     }
-
-#    dict[:role].each {|r|
-#      hide_tasks = r[:task].each.find_all {|it|
-#        it[:name] =~ /^_/
-#      }.map {|it| it[:node] }
-#      g.lowercut(*hide_tasks)
-#    }
   end
 
 
@@ -149,20 +154,6 @@ class Grapher
         role[:node][:tooltip] = 'not used by any playbook'
       end
     }
-
-    # FIXME
-#    dict[:role].each {|r|
-#      r[:var].each {|v|
-#        if not v[:used]
-#          v[:node][:fillcolor] = 'yellow'
-#          v[:node][:tooltip] += '. (EXPERIMENTAL) appears not to be used by any task in the owning role'
-#        elsif not v[:defined]
-#          v[:node][:fillcolor] = 'red'
-#          v[:node][:tooltip] += '. (EXPERIMENTAL) not defined by this role;' +
-#                            ' could be included from another role or not really a var'
-#        end
-#      }
-#    }
   end
 
   def hsl(h, s, l)
@@ -188,16 +179,22 @@ class Grapher
 
       case type
       when :var
-        if node.inc_nodes.all? {|n| n.data[:type] == :task }
-          node[:fillcolor] = hsl(33, 70, 100)
+        if data[:used].length == 0
+          # pink for unused
+          node[:fillcolor] = hsl(88, 50, 100)
+          node[:fontcolor] = hsl(0, 0, 0)
+          node[:tooltip] += '. UNUSED.'
+        elsif not data[:defined]
+          # shocking pink for undefined
+          node[:fillcolor] = hsl(88, 100, 100)
+          node[:tooltip] += '. UNDEFINED.'
         elsif node.inc_nodes.all? {|n| n.data[:type] == :vardefaults }
+          # dark green for defaults
           node[:fillcolor] = hsl(33, 90, 60)
           node[:fontcolor] = hsl(0, 0, 100)
-        end
-        if not data[:used]
-          node[:fillcolor] = hsl(88, 50, 100)
-        elsif not data[:defined]
-          node[:fillcolor] = hsl(88, 100, 100)
+        elsif node.inc_nodes.all? {|n| n.data[:type] == :task }
+          # lime for facts
+          node[:fillcolor] = hsl(33, 70, 100)
         end
       end
     }
