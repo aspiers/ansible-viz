@@ -16,7 +16,7 @@ roleA/tasks/taskA
     Includes vars from extra.yml
     Includes taskB.
     Sets factAunused (UNUSED).
-    Uses defA, varAmain, varAextra.
+    Uses defA, varAmain, varAextra, factB.
 roleA/tasks/taskB
     Sets factB.
 
@@ -36,3 +36,8 @@ Role1 is a copy of roleA, but also:
 Playbook 1:
     Uses roleA and role1.
     Uses taskA and task1.
+
+
+
+TODO:
+  Test variable precedence, IE vars that override each other.

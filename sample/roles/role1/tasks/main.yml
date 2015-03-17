@@ -2,8 +2,7 @@
 - include_vars: maininc.yml
 
 - name: part1 | Role 1 main
-  set_fact:
-    factAmain: "{{ defA |
+  blah: "{{ factAmain | defA |
       update(varAmain | default({})) |
       update(varAmaininc | default({})) }}"
 

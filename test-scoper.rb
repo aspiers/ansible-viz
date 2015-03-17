@@ -59,25 +59,25 @@ class TC_Scoper < Test::Unit::TestCase
     task1 = @role1[:task].find {|t| t[:name] == 'task1' }
     assert_not_nil taskA[:used_vars]
     assert_not_nil task1[:used_vars]
-    assert_has_all %w(defA varAmain varAextra), taskA[:used_vars]
-    assert_has_all %w(def1 var1main var1extra
-                      defA varAmain varAextra), task1[:used_vars]
+    assert_has_all %w(defA varAmain varAextra factB), taskA[:used_vars]
+    assert_has_all %w(def1 var1main var1extra fact2
+                      defA varAmain varAextra factB), task1[:used_vars]
   end
 
-  def test_dep_order
-    l = [@role1, @roleA]
-    assert_equal %w(roleA role1), @s.dep_order(l).smap(:name)
-    assert_equal [@role1, @roleA], l
-    assert_equal %w(roleA role1), @s.dep_order([@roleA, @role1]).smap(:name)
+  def test_order_tasks
+    expect = %w(main taskB taskA main task2 task1)
+    assert_equal expect, @s.order_tasks([@role1, @roleA]).smap(:name)
+    assert_equal expect, @s.order_tasks([@roleA, @role1]).smap(:name)
   end
 
   def test_scope
     @s.process(@d)
-    mainA = %w(defA varAmain)
-    main1 = mainA + %w(def1 var1main)
-    scopes = [[@roleA, "main", mainA + %w(varAmaininc factAmain)],
+    mainA = %w(defA varAmain varAmaininc factAmain)
+    main1 = mainA + %w(def1 var1main var1maininc fact1main)
+    scopes = [[@roleA, "main", mainA],
               [@roleA, "taskB", mainA + %w(factB)],
               [@roleA, "taskA", mainA + %w(varAextra factB factAunused)],
+              [@role1, "main", main1],
               [@role1, "task2", main1 + %w(fact2)],
               [@role1, "task1", main1 + %w(var1extra fact2 fact1unused)]]
     scopes.each {|role, tn, scope|
@@ -89,17 +89,8 @@ class TC_Scoper < Test::Unit::TestCase
   end
 
   def test_var_usage
-    skip  # FIXME
     @s.process(@d)
 
-    assert_has_all %w(var1 var1_up var2 factA varA varB), @role1[:used_vars].map {|v| v[:name] }
-    @role1[:used_vars].each {|v| assert v[:used] }
-    @role1[:used_vars].each {|v|
-      cond = v[:name] != 'var1_up'
-      assert_equal cond, v[:defined], "checking #{v[:name]}"
-    }
-    assert_has_all %w(varA varB), @roleA[:used_vars].map {|v| v[:name] }
-    @roleA[:used_vars].each {|v| assert v[:used] }
-    @roleA[:used_vars].each {|v| assert v[:defined] }
+    assert_has_all %w(varAmain factAmain varAmaininc defA), @roleA[:scope].smap(:name)
   end
 end

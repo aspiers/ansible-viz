@@ -143,10 +143,10 @@ class Grapher
   def decorate(g, dict, options)
     decorate_nodes(g, dict, options)
 
-    dict[:role].map {|r| r[:node] }.each {|node|
-      if node.inc_nodes.empty?
-        node[:fillcolor] = 'yellowgreen'
-        node[:tooltip] = 'not used by any playbook'
+    dict[:role].each {|role|
+      if role[:node].inc_nodes.empty?
+        role[:node][:fillcolor] = 'yellowgreen'
+        role[:node][:tooltip] = 'not used by any playbook'
       end
     }
 
@@ -193,6 +193,11 @@ class Grapher
         elsif node.inc_nodes.all? {|n| n.data[:type] == :vardefaults }
           node[:fillcolor] = hsl(33, 90, 60)
           node[:fontcolor] = hsl(0, 0, 100)
+        end
+        if not data[:used]
+          node[:fillcolor] = hsl(88, 50, 100)
+        elsif not data[:defined]
+          node[:fillcolor] = hsl(88, 100, 100)
         end
       end
     }

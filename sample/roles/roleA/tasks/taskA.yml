@@ -5,6 +5,6 @@
 
 - name: partA | Role A taskA partA
   set_fact:
-    factAunused: "{{ defA |
+    factAunused: "{{ defA | factB |
       update(varAmain | default({})) |
       update(varAextra | default({})) }}"
