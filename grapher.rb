@@ -17,13 +17,11 @@ class Grapher
     add_nodes(g, dict)
     connect_playbooks(g, dict)
     connect_roles(g, dict)
+    connect_usage(g, dict)
 
     decorate(g, dict, options)
 
     hide_dullness(g, dict)
-    # needs to come after hide_dullness or you can get double lines (one hard
-    # one grey)
-    connect_usage(g, dict)
 
     if not options.show_vars
       to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
