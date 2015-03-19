@@ -48,7 +48,18 @@ end
 def render(data, options)
   Postprocessor.new.process(data)
   Scoper.new.process(data)
-  Grapher.new.graph(data, options)
+  grapher = Grapher.new
+  g = grapher.graph(data, options)
+  g[:rankdir] = 'LR'
+  g.is_cluster = true
+
+  legend = grapher.mk_legend
+
+  superg = Graph.new
+  superg.add g, legend
+  superg[:rankdir] = 'LR'
+  superg[:tooltip] = ' '
+  superg
 end
 
 def write(graph, filename)

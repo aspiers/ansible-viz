@@ -30,20 +30,15 @@
         return document.getElementById(id);
       }
 
-      function example(id, format) {
-        var result;
+      function example(id) {
         try {
-          result = Viz(byId(id).innerHTML, format);
-          if (format === "svg")
-            return result;
-          else
-            return inspect(result);
+          return Viz(byId(id).innerHTML, "svg");
         } catch(e) {
           return inspect(e.toString());
         }
       }
 
-      byId('diagram').innerHTML = example("cluster", "svg");
+      byId('diagram').innerHTML = example("cluster");
     </script>
   </body>
 </html>

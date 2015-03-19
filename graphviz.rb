@@ -19,8 +19,9 @@ class GNode
 
   def initialize(key, attrs = {})
     @key = key
-    @attrs = attrs
+    @attrs = {}
     self[:label] = key
+    @attrs.merge! attrs
     @node = "n#@@node_counter"
     @@node_counter += 1
 
@@ -47,6 +48,7 @@ class GNode
     "N[#@key#{hsh} #{inc.count}/#{out.count}]"
   end
 end
+
 
 class GEdge
   class <<self
@@ -80,6 +82,7 @@ class GEdge
   end
 end
 
+
 class Graph
   class <<self
     def include_hashes
@@ -106,25 +109,42 @@ class Graph
       }
       g
     end
+
+    def new_subgraph(name)
+      g = Graph.new
+      g.name = name
+      g
+    end
+    def new_cluster(name)
+      g = Graph.new
+      g.name = name
+      g.is_cluster = true
+      g
+    end
   end
 
-  attr_accessor :nodes, :edges, :attrs
+  @@cluster_counter = 0
+  attr_accessor :nodes, :edges, :subgraphs, :attrs
+  attr_accessor :is_cluster, :name
 
   def initialize(nodes = [], edges = [], attrs = {})
     @nodes = Set[*nodes]
     @edges = Set[]
     add(*edges)
     @attrs = attrs
+    @subgraphs = []
+    @is_cluster = false
+    @name = 'Graph'
   end
 
   def initialize_copy(src)
-    super
     @nodes = @nodes.map {|i| i.dup }.to_set
     @edges = Set[]
     src.edges.each {|i|
       add GEdge[get(i.snode.key), get(i.dnode.key), i.attrs.dup]
     }
     @attrs = @attrs.dup
+    @subgraphs = @subgraphs.map {|sg| Graph.new.initialize_copy(sg) }
   end
 
   def [](k); attrs[k]; end
@@ -183,6 +203,8 @@ class Graph
         i.snode.out.add i
         i.dnode.inc.add i
         # puts "E---: #{i.inspect}"
+      when Graph
+        @subgraphs.unshift i
       else raise "Unexpected item: #{i.inspect}"
       end
     }
@@ -198,9 +220,12 @@ class Graph
         @edges.delete i
         i.snode.out.delete i
         i.dnode.inc.delete i
+      when Graph
+        @subgraphs.delete i
       else raise "Unexpected item: #{i.inspect}"
       end
     }
+    @subgraphs.each {|sg| sg.cut(*items) }
   end
 
   def lowercut(*items)
@@ -246,12 +271,15 @@ class Graph
      "Nodes:",
      @nodes.map {|n| "  "+ n.inspect },
      "Edges:",
-     @edges.map {|e| "  "+ e.inspect }].
+     @edges.map {|e| "  "+ e.inspect },
+     "Subgraphs:",
+     @subgraphs.map {|sg|
+       sg.inspect.split($/).map {|line| "  "+ line }
+     }].
       compact.
       join("\n")
   end
 end
-
 
 ########## GENERATE DOT #############
 
@@ -264,36 +292,44 @@ def wrapattrs(h)
   a.length > 0 and " [#{a}]" or ""
 end
 
-def g2dot(graph)
+def g2dot(graph, is_subgraph=false)
+  dot_attrs = joinattrs(graph.attrs)
+
   dot_ranks = graph.nodes.
     # TODO pass rank_node in somehow
     classify {|v| rank_node(v) }.
     map {|k,v|
-      nl = "\n  "
-      nl += "  " if k != nil
-
       rnodes = v.map {|n|
-        nl + n.node + wrapattrs(n.attrs) +";"
-      }.join("")
+        n.node + wrapattrs(n.attrs) +";"
+      }.join("\n    ")
 
       case k
       when nil then rnodes
       when :source, :min, :max, :sink
-        "{ rank = #{k};#{rnodes} }"
+        "{ rank = #{k};\n    #{rnodes} }"
       else
-        "{ rank = same;#{rnodes} }"
+        "{ rank = same;\n    #{rnodes} }"
       end
-    }.join("\n  ")
+    }
 
   dot_edges = graph.edges.map {|e|
     "#{e.snode.node} -> #{e.dnode.node}#{wrapattrs(e.attrs)};"
-  }.join("\n  ")
+  }
 
-  <<-EOT
-digraph G {
-  #{joinattrs(graph.attrs).join("\n  ")}
-  #{dot_ranks}
-  #{dot_edges}
-}
-  EOT
+  subgraphs = graph.subgraphs.map {|sg| g2dot(sg, true)
+  }.map {|dot| dot.gsub(/^/, "  ") }
+
+  gtype = ((is_subgraph and "subgraph") or "digraph")
+  gname = ((graph.is_cluster and "cluster#{graph.name}") or graph.name)
+  body = (dot_attrs + dot_ranks + dot_edges).reject {|line|
+      line.length == 0
+    }.join("\n  ")
+  # Subgraphs go first so they don't inherit attributes
+  body = subgraphs.join("\n  ") + body + "\n"
+
+  "#{gtype} \"#{gname}\" {\n  #{body}}\n"
+end
+
+def rank_node(n)
+  nil
 end

@@ -11,8 +11,9 @@ require 'pp'
 class Grapher
   def graph(dict, options)
     g = Graph.new
-    g[:rankdir] = 'LR'
     g[:tooltip] = ' '
+    g[:label] = "Ansible dependencies"
+    g[:fontsize] = 36
 
     add_nodes(g, dict)
     connect_playbooks(g, dict)
@@ -75,7 +76,9 @@ class Grapher
     elsif dst[:node] == nil
       raise "Bad dst: #{dst[:name]}"
     end
-    g.add GEdge[src[:node], dst[:node], {:tooltip => tooltip}.merge(extra)]
+    edge = GEdge[src[:node], dst[:node], {:tooltip => tooltip}.merge(extra)]
+    g.add edge
+    edge
   end
 
   def connect_playbooks(g, dict)
@@ -84,8 +87,8 @@ class Grapher
         add_edge(g, playbook, role, "includes")
       }
       (playbook[:task] || []).each {|task|
-        add_edge(g, playbook, task, "calls task",
-          {:style => 'dashed', :color => 'blue'})
+        edge = add_edge(g, playbook, task, "calls task")
+        style(edge, :call_task)
       }
     }
   end
@@ -93,8 +96,8 @@ class Grapher
   def connect_roles(g, dict)
     dict[:role].each {|role|
       (role[:role_deps] || []).each {|dep|
-        add_edge(g, role, dep, "calls foreign task",
-          {:color => 'red'})
+        edge = add_edge(g, role, dep, "calls extra task")
+        style(edge, :call_extra_task)
       }
 
       role[:task].each {|task|
@@ -120,11 +123,8 @@ class Grapher
     dict[:role].each {|role|
       role[:task].each {|task|
         (task[:uses] || []).each {|var|
-          if not var[:defined] or
-              not g.edges.any? {|e| [e.snode, e.dnode] == [task[:node], var[:node]] }
-            add_edge(g, task, var, "uses var",
-                     {:color => 'lightgrey', :tooltip => 'uses var'})
-          end
+          edge = add_edge(g, task, var, "uses var")
+          style(edge, :use_var)
         }
       }
     }
@@ -140,72 +140,169 @@ class Grapher
       n.out = Set[]
       g.cut n
     }
+
+    # Elide var usage from things which define the var
+    # Maybe do this in the model?
+#    g.nodes.find_all {|n|
+#      n.data[:type] == :var
+#    }.each {|n|
+#      n.inc
+#    }
   end
 
 
   ########## DECORATE ###########
+
+  class <<self
+    def hsl(h, s, l)
+      [h, s, l].map {|i| i / 100.0 }.join("+")
+    end
+  end
+
+  @@style = {
+    # Node styles
+    :playbook => {:shape => 'folder',
+                  :style => 'filled',
+                  :fillcolor => hsl(66, 8, 100)},
+    :role     => {:shape => 'house',
+                  :style => 'filled',
+                  :fillcolor => hsl(66, 24, 100)},
+    :task     => {:shape => 'octagon',
+                  :style => 'filled',
+                  :fillcolor => hsl(66, 40, 100)},
+    :varset   => {:shape => 'box3d',
+                  :style => 'filled',
+                  :fillcolor => hsl(33, 8, 100)},
+    :var      => {:shape => 'oval',
+                  :style => 'filled',
+                  :fillcolor => hsl(33, 60, 80)},
+
+    # Node decorations
+    :role_unused   => {:style => 'filled',
+                       :fillcolor => hsl(82, 24, 100)},
+    :var_unused    => {:style => 'filled',
+                       :fillcolor => hsl(88, 50, 100),
+                       :fontcolor => hsl(0, 0, 0)},
+    :var_undefined => {:style => 'filled',
+                       :fillcolor => hsl(88, 100, 100)},
+    :var_default   => {:style => 'filled',
+                       :fillcolor => hsl(33, 90, 60),
+                       :fontcolor => hsl(0, 0, 100)},
+    :var_fact      => {:style => 'filled',
+                       :fillcolor => hsl(33, 70, 100)},
+
+    # Edge styles
+    :use_var => {:color => 'lightgrey',
+                 :tooltip => 'uses var'},
+    :call_task => {:color => 'blue',
+                   :style => 'dashed'},
+    :call_extra_task => {:color => 'red'},
+  }
+
+  def style(node_or_edge, style)
+    (@@style[style] || {}).each_pair {|k,v| node_or_edge[k] = v }
+    node_or_edge
+  end
 
   def decorate(g, dict, options)
     decorate_nodes(g, dict, options)
 
     dict[:role].each {|role|
       if role[:node].inc_nodes.empty?
-        role[:node][:fillcolor] = 'yellowgreen'
-        role[:node][:tooltip] = 'not used by any playbook'
+        style(role[:node], :role_unused)
+        role[:node][:tooltip] += '. Unused by any playbook'
       end
     }
   end
 
-  def hsl(h, s, l)
-    [h, s, l].map {|i| i / 100.0 }.join("+")
-  end
-
   def decorate_nodes(g, dict, options)
-    types = {:playbook => {:shape => 'folder', :fillcolor => hsl(66, 8, 100)},
-             :role => {:shape => 'house', :fillcolor => hsl(66, 24, 100)},
-             :task => {:shape => 'octagon', :fillcolor => hsl(66, 40, 100)},
-             :varset => {:shape => 'box3d', :fillcolor => hsl(33, 8, 100)},
-             :var => {:shape => 'oval', :fillcolor => hsl(33, 60, 80)}}
     g.nodes.each {|node|
       data = node.data
       type = data[:type]
       type = :varset if type == :vardefaults
-      types[type].each_pair {|k,v| node[k] = v }
+      style(node, type)
       node[:label] = data[:name]
-      node[:style] = 'filled'
       fqn = collect_parents(data)
       fqn = fqn.map {|i| i[:name] }.join("::")
-      node[:tooltip] = "#{type.to_s.capitalize} #{fqn}"
+      typename = case type
+                 when :varset then "Vars"
+                 else type.to_s.capitalize
+                 end
+      node[:tooltip] = "#{typename} #{fqn}"
 
       case type
       when :var
         if data[:used].length == 0
-          # pink for unused
-          node[:fillcolor] = hsl(88, 50, 100)
-          node[:fontcolor] = hsl(0, 0, 0)
+          style(node, :var_unused)
           node[:tooltip] += '. UNUSED.'
         elsif not data[:defined]
-          # shocking pink for undefined
-          node[:fillcolor] = hsl(88, 100, 100)
+          style(node, :var_undefined)
           node[:tooltip] += '. UNDEFINED.'
         elsif node.inc_nodes.all? {|n| n.data[:type] == :vardefaults }
-          # dark green for defaults
-          node[:fillcolor] = hsl(33, 90, 60)
-          node[:fontcolor] = hsl(0, 0, 100)
+          style(node, :var_default)
         elsif node.inc_nodes.all? {|n| n.data[:type] == :task }
-          # lime for facts
-          node[:fillcolor] = hsl(33, 70, 100)
+          style(node, :var_fact)
         end
       end
     }
   end
+
+  def mk_legend
+    nodes = Hash[*([:playbook, :role, :task, :varset, :var].flat_map {|type|
+      node = style(GNode[type.to_s.capitalize], type)
+      [type, node]
+    })]
+    nodes[:varset][:label] = "Vars"
+    nodes[:default] = style(GNode["Var default"], :var_default)
+    nodes[:main_var] = style(GNode["Main var"], :var)
+    nodes[:unused] = style(GNode["Unused var"], :var_unused)
+    nodes[:undefined] = style(GNode["Undefined var"], :var_undefined)
+    nodes[:fact] = style(GNode["Fact"], :var_fact)
+    edges = [
+      GEdge[nodes[:playbook], nodes[:role], {:label => "calls"}],
+      style(GEdge[nodes[:playbook], nodes[:task], {:label => "calls extra task"}],
+          :call_extra_task),
+      GEdge[nodes[:role], nodes[:task], {:label => "defines"}],
+      GEdge[nodes[:role], nodes[:varset], {:label => "defines"}],
+      GEdge[nodes[:role], nodes[:default], {:label => "defaults define"}],
+      GEdge[nodes[:role], nodes[:main_var], {:label => "main task defines"}],
+      GEdge[nodes[:varset], nodes[:var], {:label => "defines"}],
+      GEdge[nodes[:varset], nodes[:unused], {:label => "defines"}],
+      style(GEdge[nodes[:task], nodes[:undefined], {:label => "uses"}], :use_var),
+      GEdge[nodes[:task], nodes[:fact], {:label => "defines"}],
+    ].flat_map {|e|
+      n = GNode[e[:label]]
+      n[:shape] = 'none'
+
+      e1 = GEdge[e.snode, n]
+      e2 = GEdge[n, e.dnode]
+      [e1, e2].each {|ee|
+        ee.attrs = e.attrs.dup
+        ee[:label] = nil
+      }
+      e1[:arrowhead] = 'none'
+
+      [e1, e2]
+    }
+    legend = Graph.new_cluster('legend')
+    legend.add(*edges)
+    legend[:bgcolor] = Grapher.hsl(15, 3, 100)
+    legend[:label] = "Legend"
+    legend[:fontsize] = 36
+    legend
+  end
 end
+
 
 # This is accessed as a global from graph_viz.rb, EWW
 def rank_node(node)
+  if node.data == nil
+    return nil
+  end
   case node.data[:type]
   when :playbook then :source
   when :task, :varset then :same
   when :var then :sink
+  else nil
   end
 end
