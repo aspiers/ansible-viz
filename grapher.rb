@@ -32,21 +32,8 @@ class Grapher
     g
   end
 
-  def collect_parents(it)
-    case it[:type]
-    when :playbook, :role
-      return [it]
-    end
-    if it[:parent] == nil
-      pp it
-    end
-    collect_parents(it[:parent]) + [it]
-  end
-
   def add_node(g, it)
-    fqn = collect_parents(it)
-    fqn = fqn.map {|i| i[:name] }.join("::")
-    node = GNode[fqn]
+    node = GNode[it[:fqn]]
     node.data = it
     it[:node] = node
     g.add(node)
@@ -222,13 +209,11 @@ class Grapher
       type = :varset if type == :vardefaults
       style(node, type)
       node[:label] = data[:name]
-      fqn = collect_parents(data)
-      fqn = fqn.map {|i| i[:name] }.join("::")
       typename = case type
                  when :varset then "Vars"
                  else type.to_s.capitalize
                  end
-      node[:tooltip] = "#{typename} #{fqn}"
+      node[:tooltip] = "#{typename} #{data[:fqn]}"
 
       case type
       when :var

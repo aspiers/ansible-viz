@@ -13,6 +13,11 @@ class Postprocessor
   def process(dict)
     dict[:role].each {|role| do_role(dict, role) }
     dict[:playbook].each {|playbook| do_playbook(dict, playbook) }
+    dict[:role].each {|role|
+      role[:task].each {|task|
+        resolve_task_includes(dict, task)
+      }
+    }
   end
 
   def do_role(dict, role)
@@ -75,8 +80,6 @@ class Postprocessor
     task[:included_tasks] = data.find_all {|i|
       i.is_a? Hash and i['include']
     }.map {|i| i['include'].split(" ")[0].sub(/\.yml$/, '')
-    }.map {|n|
-      role[:task].find {|t| t[:name] == n }
     }
 
     task[:included_varsets] = data.find_all {|i|
@@ -97,6 +100,21 @@ class Postprocessor
       end
     }.map {|n|
       thing(task, :var, n, {:defined => true})
+    }
+  end
+
+  def resolve_task_includes(dict, task)
+    task[:included_tasks] = task[:included_tasks].map {|name|
+      role = task[:parent]
+      if name =~ %r!../../([^/]+)/tasks/([^/]+)!
+        role = dict[:role].find {|r| r[:name] == $1 }
+        name = $2
+      end
+      incl_task = role[:task].find {|t| t[:name] == name }
+      if incl_task == nil
+        raise "Failed to find included task: #{name}.yml"
+      end
+      incl_task
     }
   end
 end

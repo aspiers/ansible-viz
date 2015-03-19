@@ -88,13 +88,12 @@ class Scoper
         item[:loaded] = true
         order.push item
       else
-#        parent = item[:parent] || {:name => '???'}
-#        puts "Failed to process #{parent[:name]}::#{item[:name]}, deps: " + deps.map {|it| it[:name] }.join(" ")
+#        puts "Failed to process #{item[:fqn]}, deps: " + deps.map {|it| it[:name] }.join(" ")
         todo.push item
       end
       safe += 1
-      if safe > 100
-        oops = todo.map {|it| it[:name] }.join(" ")
+      if safe > 500
+        oops = todo.map {|it| it[:fqn] }.join(" ")
         raise "oops: #{oops}"
       end
     end
@@ -104,16 +103,18 @@ class Scoper
 
   def order_tasks(roles)
     roles = order_list(roles) {|role| role[:role_deps] }
-    roles.flat_map {|role|
-      order_list(role[:task]) {|task|
-        incl_tasks = task[:included_tasks].dup
-        # :used_by_main is a pretty awful hack to break a circular scope dependency
-        if task == task[:main_task]
-          task[:included_tasks].each {|t| t[:used_by_main] == true }
-        elsif not task[:used_by_main]
-          incl_tasks += (task[:main_task] || [])
-        end
-      }
+    all_tasks = roles.flat_map {|role|
+      role[:task]
+    }
+    order_list(all_tasks) {|task|
+      incl_tasks = task[:included_tasks].dup
+      # :used_by_main is a pretty awful hack to break a circular scope dependency
+      if task == task[:main_task]
+        task[:included_tasks].each {|t| t[:used_by_main] == true }
+      elsif not task[:used_by_main]
+        incl_tasks += (task[:main_task] || [])
+      end
+      incl_tasks
     }
   end
 

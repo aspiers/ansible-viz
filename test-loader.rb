@@ -7,7 +7,9 @@ class TC_Loader < Test::Unit::TestCase
   def test_thing
     d = {}
     it = thing(d, :abc, "def", {"ghi" => "jkl"})
-    assert_equal({:type=>:abc, :name=>"def", "ghi"=>"jkl"}, it)
+    it2 = thing(it, :xyz, "456")
+    assert_equal({:type=>:abc, :name=>"def", :fqn=>"def", "ghi"=>"jkl", :xyz=>[it2]}, it)
+    assert_equal({:type=>:xyz, :name=>"456", :fqn=>"def::456", :parent=>it}, it2)
     assert_has_all d[:abc], [it]
   end
 
@@ -79,7 +81,7 @@ class TC_Loader < Test::Unit::TestCase
     assert_not_nil playbook
 
     playbook.delete(:data)
-    expect = {:type=>:playbook, :name=>"playbook1"}
+    expect = thing({}, :playbook, "playbook1")
     assert_equal expect, playbook
   end
 end

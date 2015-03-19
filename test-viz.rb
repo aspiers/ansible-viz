@@ -1,4 +1,5 @@
 #!/usr/bin/ruby
+# vim: set ts=2 sw=2:
 
 require 'rubygems'
 require 'bundler/setup'
@@ -13,7 +14,8 @@ def assert_has_all(e, a, m="")
 end
 
 def assert_keys(it, *keys)
-  assert_has_all [:type, :name] + keys, it.keys
+  base = [:type, :name, :fqn]
+  assert_has_all base + keys, it.keys
 end
 
 module Enumerable

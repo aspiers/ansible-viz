@@ -10,9 +10,10 @@ require 'pp'
 
 
 def thing(parent, type, name, extra = {})
-  it = {:type => type, :name => name}.merge(extra)
+  it = {:type => type, :name => name, :fqn => name}.merge(extra)
   if parent[:type] != nil
-    it.merge!({:parent => parent})
+    it.merge!({:parent => parent,
+               :fqn => "#{parent[:fqn]}::#{name}"})
   end
   parent[type] ||= []
   parent[type].push it
