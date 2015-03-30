@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2:
+# vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
 require 'ostruct'
@@ -11,7 +11,7 @@ class Scoper
   # Must ensure everything grapher expects is set, even if to empty []/{}.
   #
   # Vars can appear:
-  #   * In role[:varset][:var], when defined in vars/
+  #   * In role[:varfile][:var], when defined in vars/
   #   * In role[:task][:var], when defined by set_fact
   #
   # Also task[:scope] exists
@@ -122,17 +122,17 @@ class Scoper
     # This method must be called in bottom-up dependency order.
     role = task[:parent]
     if role[:scope] == nil
-      main_vs = role[:varset].find {|vs| vs[:name] == 'main' } || {:var => []}
-      vardefaults = role[:varset].find {|vs| vs[:type] == :vardefaults } || {:var => []}
+      main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
+      vardefaults = role[:varfile].find {|vf| vf[:type] == :vardefaults } || {:var => []}
       # role[:scope] should really only be set after the main task has been handled.
       # main can include other tasks though, so to break the circular dependency, allow
       # a partial role[:scope] of just the vars, defaults and dependent roles' scopes.
-      role[:scope] = main_vs[:var] + vardefaults[:var] +
+      role[:scope] = main_vf[:var] + vardefaults[:var] +
                      role[:role_deps].flat_map {|d| d[:scope] }
     end
     # This list must be in ascending precedence order
     task[:debug] = {
-      :incl_varsets => task[:included_varsets].flat_map {|vs| vs[:var] },
+      :incl_varfiles => task[:included_varfiles].flat_map {|vf| vf[:var] },
       :incl_scopes => task[:included_tasks].flat_map {|t| t[:scope] },
       :role_scope => role[:scope],
       :facts => task[:var]

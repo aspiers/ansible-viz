@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2:
+# vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
 require 'bundler/setup'
@@ -35,5 +35,6 @@ end
 require 'test/unit'
 require './test-loader'
 require './test-postprocessor'
+require './test-resolver'
 require './test-scoper'
 require './test-grapher'

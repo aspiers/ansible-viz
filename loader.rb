@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2:
+# vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
 require 'mustache'
@@ -22,6 +22,10 @@ end
 
 
 class Loader
+  # Creates things for playbooks, roles, tasks and varfiles.
+  # Vars in role/defaults/main.yml are provided as a varfile with type :vardefaults.
+  # Includes are noted by name/path, not turned into thing refs.
+
   class <<self
     def ls(path, default=nil)
       if !File.directory? path
@@ -74,7 +78,7 @@ class Loader
 
     vardir = File.join(path, name, "vars")
     Loader.ls_yml(vardir, []).
-      map {|f| mk_varset(role, vardir, f) }
+      map {|f| mk_varfile(role, vardir, f) }
 
     vardefdir = File.join(path, name, "defaults")
     Loader.ls_yml(vardefdir, []).
@@ -87,10 +91,10 @@ class Loader
     role
   end
 
-  def mk_varset(role, path, file)
+  def mk_varfile(role, path, file)
     name = file.sub(/.yml$/, '')
     data = Loader.yaml_slurp(path, file) || {}
-    thing(role, :varset, name, {:data => data})
+    thing(role, :varfile, name, {:data => data})
   end
 
   def mk_vardefaults(role, path, file)

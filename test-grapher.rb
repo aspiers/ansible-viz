@@ -22,31 +22,6 @@ class TC_Grapher < Test::Unit::TestCase
     w
   end
 
-  def test_dist
-    # Experiment with hidden node to assist with ranking
-    skip
-    n1 = GNode["1"]
-    n1.data = {:type => :playbook}
-    n2 = GNode["2"]
-    n2.data = {:type => :none}
-    n3 = GNode["3"]
-    n3.data = {:type => :var}
-    @g.add n1, n2, n3
-
-    e1 = GEdge[n1, n2]
-    e2 = GEdge[n2, n3]
-    @g.add e1, e2
-
-    n2[:shape] = 'none'
-    n2[:width] = 0
-    n2[:height] = 0
-    n2[:margin] = 0
-    n2[:label] = ''
-    e1[:arrowhead] = 'none'
-
-    w
-  end
-
   def test_add_node
     d = {}
     role = thing(d, :role, "role")
@@ -61,8 +36,8 @@ class TC_Grapher < Test::Unit::TestCase
     role = thing(d, :role, "rrr")
     task = thing(role, :task, "ttt")
     thing(task, :var, "fff")  # fact
-    varset = thing(role, :varset, "sss")
-    var = thing(varset, :var, "vvv")
+    varfile = thing(role, :varfile, "sss")
+    var = thing(varfile, :var, "vvv")
     playbook = thing(d, :playbook, "ppp", {:role => [role], :task => [task]})
 
     Grapher.new.add_nodes(@g, d)

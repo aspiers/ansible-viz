@@ -32,8 +32,8 @@ class TC_Loader < Test::Unit::TestCase
     d = {}
     role = Loader.new.mk_role(d, "sample/roles", "role1")
 
-    assert_has_all %w(maininc extra main), role[:varset].smap(:name)
-    role.delete(:varset)
+    assert_has_all %w(maininc extra main), role[:varfile].smap(:name)
+    role.delete(:varfile)
 
     assert_has_all %w(main), role[:vardefaults].smap(:name)
     role.delete(:vardefaults)
@@ -45,14 +45,14 @@ class TC_Loader < Test::Unit::TestCase
     assert_equal expect, role
   end
 
-  def test_varset
+  def test_varfile
     d = {}
     role = thing(d, :role, "role")
-    varset = Loader.new.mk_varset(role, "sample/roles/role1/vars", "main.yml")
+    varfile = Loader.new.mk_varfile(role, "sample/roles/role1/vars", "main.yml")
 
-    varset.delete :data
-    expect = thing(thing({}, :role, "role"), :varset, "main", {:parent => d})
-    assert_equal expect, varset
+    varfile.delete :data
+    expect = thing(thing({}, :role, "role"), :varfile, "main", {:parent => d})
+    assert_equal expect, varfile
   end
 
   def test_vardefaults

@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2:
+# vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
 require 'mustache'
@@ -12,6 +12,7 @@ require 'pp'
 require './graphviz'
 require './loader'
 require './postprocessor'
+require './resolver'
 require './scoper'
 require './grapher'
 
@@ -47,6 +48,7 @@ end
 
 def render(data, options)
   Postprocessor.new.process(data)
+  Resolver.new.process(data)
   Scoper.new.process(data)
   grapher = Grapher.new
   g = grapher.graph(data, options)

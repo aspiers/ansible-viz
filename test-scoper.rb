@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2:
+# vim: set ts=2 sw=2 tw=100:
 
 require 'test/unit'
 require 'ostruct'
@@ -50,6 +50,7 @@ class TC_Scoper < Test::Unit::TestCase
     @role1 = @d[:role].find {|r| r[:name] == "role1" }
     @roleA = @d[:role].find {|r| r[:name] == "roleA" }
     Postprocessor.new.process(@d)
+    Resolver.new.process(@d)
     @s = Scoper.new
   end
 

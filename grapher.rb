@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2:
+# vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
 require './graphviz'
@@ -46,9 +46,9 @@ class Grapher
         add_node(g, task)
         task[:var].each {|var| add_node(g, var) }
       }
-      role[:varset].each {|vs|
-        add_node(g, vs)
-        vs[:var].each {|v| add_node(g, v) }
+      role[:varfile].each {|vf|
+        add_node(g, vf)
+        vf[:var].each {|v| add_node(g, v) }
       }
     }
     dict[:playbook].each {|playbook|
@@ -96,11 +96,11 @@ class Grapher
         }
       }
 
-      (role[:varset] || []).each {|vs|
-        is_main = false  #vs[:name] == 'main'
-        add_edge(g, role, vs, "defines var") unless is_main
-        vs[:var].each {|v|
-          add_edge(g, (is_main and role or vs), v, "defines var")
+      (role[:varfile] || []).each {|vf|
+        is_main = false  #vf[:name] == 'main'
+        add_edge(g, role, vf, "defines var") unless is_main
+        vf[:var].each {|v|
+          add_edge(g, (is_main and role or vf), v, "defines var")
         }
       }
     }
@@ -157,7 +157,7 @@ class Grapher
     :task     => {:shape => 'octagon',
                   :style => 'filled',
                   :fillcolor => hsl(66, 40, 100)},
-    :varset   => {:shape => 'box3d',
+    :varfile   => {:shape => 'box3d',
                   :style => 'filled',
                   :fillcolor => hsl(33, 8, 100)},
     :var      => {:shape => 'oval',
@@ -206,11 +206,11 @@ class Grapher
     g.nodes.each {|node|
       data = node.data
       type = data[:type]
-      type = :varset if type == :vardefaults
+      type = :varfile if type == :vardefaults
       style(node, type)
       node[:label] = data[:name]
       typename = case type
-                 when :varset then "Vars"
+                 when :varfile then "Vars"
                  else type.to_s.capitalize
                  end
       node[:tooltip] = "#{typename} #{data[:fqn]}"
@@ -233,11 +233,11 @@ class Grapher
   end
 
   def mk_legend
-    nodes = Hash[*([:playbook, :role, :task, :varset, :var].flat_map {|type|
+    nodes = Hash[*([:playbook, :role, :task, :varfile, :var].flat_map {|type|
       node = style(GNode[type.to_s.capitalize], type)
       [type, node]
     })]
-    nodes[:varset][:label] = "Vars"
+    nodes[:varfile][:label] = "Vars"
     nodes[:default] = style(GNode["Var default"], :var_default)
     nodes[:main_var] = style(GNode["Main var"], :var)
     nodes[:unused] = style(GNode["Unused var"], :var_unused)
@@ -248,11 +248,11 @@ class Grapher
       style(GEdge[nodes[:playbook], nodes[:task], {:label => "calls extra task"}],
           :call_extra_task),
       GEdge[nodes[:role], nodes[:task], {:label => "defines"}],
-      GEdge[nodes[:role], nodes[:varset], {:label => "defines"}],
+      GEdge[nodes[:role], nodes[:varfile], {:label => "defines"}],
       GEdge[nodes[:role], nodes[:default], {:label => "defaults define"}],
       GEdge[nodes[:role], nodes[:main_var], {:label => "main task defines"}],
-      GEdge[nodes[:varset], nodes[:var], {:label => "defines"}],
-      GEdge[nodes[:varset], nodes[:unused], {:label => "defines"}],
+      GEdge[nodes[:varfile], nodes[:var], {:label => "defines"}],
+      GEdge[nodes[:varfile], nodes[:unused], {:label => "defines"}],
       style(GEdge[nodes[:task], nodes[:undefined], {:label => "uses"}], :use_var),
       GEdge[nodes[:task], nodes[:fact], {:label => "defines"}],
     ].flat_map {|e|
@@ -286,7 +286,7 @@ def rank_node(node)
   end
   case node.data[:type]
   when :playbook then :source
-  when :task, :varset then :same
+  when :task, :varfile then :same
   when :var then :sink
   else nil
   end
