@@ -106,10 +106,16 @@ class Grapher
       }
 
       (role[:varfile] || []).each {|vf|
-        is_main = false  #vf[:name] == 'main'
-        add_edge(g, role, vf, "defines var") unless is_main
+        add_edge(g, role, vf, "defines var")
         vf[:var].each {|v|
-          add_edge(g, (is_main and role or vf), v, "defines var")
+          add_edge(g, vf, v, "defines var")
+        }
+      }
+
+      (role[:vardefaults] || []).each {|vf|
+        add_edge(g, role, vf, "defines default var")
+        vf[:var].each {|v|
+          add_edge(g, vf, v, "defines var")
         }
       }
     }
@@ -225,7 +231,6 @@ class Grapher
     g.nodes.each {|node|
       data = node.data
       type = data[:type]
-      type = :varfile if type == :vardefaults
       style(node, type)
       node[:label] = data[:name]
       typename = case type
