@@ -21,7 +21,7 @@ class Scoper
     # then sweep down checking all used vars are defined.
     # This may need to be oriented around tasks not roles >.<
 
-    find_var_usages(dict)
+    find_var_uses(dict)
 
     order = order_tasks(dict[:role])
 #    puts order.map {|r| r[:name] }.join(" ")
@@ -36,14 +36,15 @@ class Scoper
     }
   end
 
-  def find_var_usages(dict)
+  def find_var_uses(dict)
     dict[:role].each {|role|
       role[:task].each {|task|
         task[:used_vars] = find_vars(task[:data]).uniq
         # TODO control this with a flag
-        task[:used_vars] = task[:used_vars].map {|v|
-          v =~ /(.*)_update$/ and $1 or v
+        task[:used_vars] = task[:used_vars].flat_map {|v|
+          v =~ /(_default|_updates)$/ and [] or [v]
         }.uniq
+        raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
       }
     }
   end
@@ -54,26 +55,30 @@ class Scoper
     elsif data.is_a? Enumerable
       data.flat_map {|i| find_vars(i) }
     else
-      # This really needs a proper parser
-      fns = %w(join int item dirname basename regex_replace)
-      data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
-        map {|s|
-          os = nil
-          while os != s
-            os = s
-            s = s.gsub(/\w+\((.*?)\)/, '\1')
-          end
-          s
-        }.
-        flat_map {|s| s.split("|") }.
-        reject {|s| s =~ /\w+\.stdout/ }.
-        map {|s| s.split(".")[0] }.
-        map {|s| s.split("[")[0] }.
-        map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
-        map {|s| s.strip }.
-        reject {|s| fns.include? s }.
-        reject {|s| s.empty? }
+      find_vars_in_string(data)
     end
+  end
+
+  def find_vars_in_string(data)
+    # This really needs a proper parser
+    fns = %w(ansible_env join int item dirname basename regex_replace)
+    data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).map {|m| m[0] }.
+      map {|s|
+        os = nil
+        while os != s
+          os = s
+          s = s.gsub(/\w+\((.*?)\)/, '\1')
+        end
+        s
+      }.
+      flat_map {|s| s.split("|") }.
+      reject {|s| s =~ /\w+\.stdout/ }.
+      map {|s| s.split(".")[0] }.
+      map {|s| s.split("[")[0] }.
+      map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
+      map {|s| s.strip }.
+      reject {|s| fns.include? s }.
+      reject {|s| s.empty? }
   end
 
   def order_list(list)
@@ -118,12 +123,24 @@ class Scoper
     }
   end
 
+  def raise_if_nil(name, it)
+    if it == nil
+      raise "#{name} is nil"
+    elsif it.include? nil
+      raise "#{name} includes nil"
+    end
+  end
+
   def calc_scope(dict, task)
     # This method must be called in bottom-up dependency order.
     role = task[:parent]
     if role[:scope] == nil
       main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
+      raise_if_nil("main_vf", main_vf)
+
       defaults = role[:vardefaults].flat_map {|vf| vf[:var] }
+      raise_if_nil("defaults", defaults)
+
       # role[:scope] should really only be set after the main task has been handled.
       # main can include other tasks though, so to break the circular dependency, allow
       # a partial role[:scope] of just the vars, defaults and dependent roles' scopes.
@@ -137,6 +154,7 @@ class Scoper
       :role_scope => role[:scope],
       :facts => task[:var]
     }
+    task[:debug].each {|k,v| raise_if_nil(k, v) }
     task[:scope] = task[:debug].values.inject {|a,i| a + i }
     if task == role[:main_task]
       # update the role[:scope] so it has the full picture

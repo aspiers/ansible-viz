@@ -54,8 +54,8 @@ class TC_Scoper < Test::Unit::TestCase
     @s = Scoper.new
   end
 
-  def test_find_var_usages
-    @s.find_var_usages(@d)
+  def test_find_var_uses
+    @s.find_var_uses(@d)
     taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
     task1 = @role1[:task].find {|t| t[:name] == 'task1' }
     assert_not_nil taskA[:used_vars]

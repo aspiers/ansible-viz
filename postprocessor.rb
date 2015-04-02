@@ -27,8 +27,12 @@ class Postprocessor
 
   def process_vars(dict, varfile)
     data = varfile[:data]
-    varfile[:var] = data.keys.map {|varname|
-      thing(varfile, :var, varname, {:defined => true})
+    varfile[:var] = data.each.flat_map {|key, value|
+      if key =~ /(_default|_updates)$/
+        []
+      else
+        [thing(varfile, :var, key, {:defined => true, :data => value})]
+      end
     }
   end
 

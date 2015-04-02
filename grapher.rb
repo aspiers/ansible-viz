@@ -133,7 +133,7 @@ class Grapher
   def hide_dullness(g, dict)
     # Given a>main>c, produce a>c
     g.nodes.find_all {|n|
-      n.data[:name] == 'main' or n.data[:type] == :vardefaults
+      n.data[:name] == 'main'
     }.each {|n|
       inc_node = n.inc_nodes[0]
       n.out.each {|e| e.snode = inc_node }
@@ -161,21 +161,30 @@ class Grapher
 
   @@style = {
     # Node styles
-    :playbook => {:shape => 'folder',
-                  :style => 'filled',
-                  :fillcolor => hsl(66, 8, 100)},
-    :role     => {:shape => 'house',
-                  :style => 'filled',
-                  :fillcolor => hsl(66, 24, 100)},
-    :task     => {:shape => 'octagon',
-                  :style => 'filled',
-                  :fillcolor => hsl(66, 40, 100)},
-    :varfile   => {:shape => 'box3d',
-                  :style => 'filled',
-                  :fillcolor => hsl(33, 8, 100)},
-    :var      => {:shape => 'oval',
-                  :style => 'filled',
-                  :fillcolor => hsl(33, 60, 80)},
+    :playbook => {
+      :shape => 'folder',
+      :style => 'filled',
+      :fillcolor => hsl(66, 8, 100)},
+    :role => {
+      :shape => 'house',
+      :style => 'filled',
+      :fillcolor => hsl(66, 24, 100)},
+    :task => {
+      :shape => 'octagon',
+      :style => 'filled',
+      :fillcolor => hsl(66, 40, 100)},
+    :varfile => {
+      :shape => 'box3d',
+      :style => 'filled',
+      :fillcolor => hsl(33, 8, 100)},
+    :vardefaults => {
+      :shape => 'box3d',
+      :style => 'filled',
+      :fillcolor => hsl(33, 8, 90)},
+    :var => {
+      :shape => 'oval',
+      :style => 'filled',
+      :fillcolor => hsl(33, 60, 80)},
 
     # Node decorations
     :role_unused   => {:style => 'filled',
@@ -246,13 +255,16 @@ class Grapher
   end
 
   def mk_legend
-    nodes = Hash[*([:playbook, :role, :task, :varfile, :var].flat_map {|type|
+    types = [:playbook, :role, :task, :varfile, :vardefaults, :var]
+    nodes = Hash[*(types.flat_map {|type|
       node = style(GNode[type.to_s.capitalize], type)
       [type, node]
     })]
-    nodes[:varfile][:label] = "Vars"
-    nodes[:default] = style(GNode["Var default"], :var_default)
-    nodes[:main_var] = style(GNode["Main var"], :var)
+    nodes[:varfile][:label] = "Extra vars file"
+    nodes[:vardefaults][:label] = "Extra defaults file"
+    nodes[:main_var] = style(GNode["Var"], :var)
+    nodes[:main_default] = style(GNode["Default"], :var_default)
+    nodes[:default_var] = style(GNode["Default"], :var_default)
     nodes[:unused] = style(GNode["Unused var"], :var_unused)
     nodes[:undefined] = style(GNode["Undefined var"], :var_undefined)
     nodes[:fact] = style(GNode["Fact"], :var_fact)
@@ -261,13 +273,17 @@ class Grapher
       style(GEdge[nodes[:playbook], nodes[:task], {:label => "calls extra task"}],
           :call_extra_task),
       GEdge[nodes[:role], nodes[:task], {:label => "defines"}],
-      GEdge[nodes[:role], nodes[:varfile], {:label => "defines"}],
-      GEdge[nodes[:role], nodes[:default], {:label => "defaults define"}],
-      GEdge[nodes[:role], nodes[:main_var], {:label => "main task defines"}],
+      GEdge[nodes[:role], nodes[:varfile], {:label => "provides"}],
+      GEdge[nodes[:role], nodes[:main_var], {:label => "main vars define"}],
+      GEdge[nodes[:role], nodes[:main_default], {:label => "main defaults define"}],
+      GEdge[nodes[:role], nodes[:vardefaults], {:label => "provides"}],
+      GEdge[nodes[:vardefaults], nodes[:default_var], {:label => "define"}],
       GEdge[nodes[:varfile], nodes[:var], {:label => "defines"}],
       GEdge[nodes[:varfile], nodes[:unused], {:label => "defines"}],
       style(GEdge[nodes[:task], nodes[:undefined], {:label => "uses"}], :use_var),
       GEdge[nodes[:task], nodes[:fact], {:label => "defines"}],
+      GEdge[nodes[:task], nodes[:vardefaults], {:label => "include_vars"}],
+      GEdge[nodes[:task], nodes[:default_var], {:label => "uses"}],
     ].flat_map {|e|
       n = GNode[e[:label]]
       n[:shape] = 'none'
