@@ -20,15 +20,9 @@ class Postprocessor
 
     role[:varfile] ||= []
     role[:varfile].each {|varfile| process_vars(role, varfile) }
-    if role[:vardefaults] != nil
-      # Consider defaults/main.yml just another varfile
-      # Note the type is still :vardefaults
-      vardefaults = role[:vardefaults][0]  # there can be only one
-      vardefaults[:name] = 'defaults'
-      process_vars(role, vardefaults)
-      role[:varfile].push vardefaults
-      role.delete :vardefaults
-    end
+
+    role[:vardefaults] ||= []
+    role[:vardefaults].each {|varfile| process_vars(role, varfile) }
   end
 
   def process_vars(dict, varfile)

@@ -71,7 +71,7 @@ class Loader
     begin
       meta = Loader.yaml_slurp(path, name, "meta", "main.yml")
       role[:role_deps] = (meta['dependencies'] || []).
-        map {|dep| dep['role'] }
+        map {|dep| dep.is_a?(Hash) and dep['role'] or dep }
     rescue Errno::ENOENT
       role[:role_deps] = []
     end

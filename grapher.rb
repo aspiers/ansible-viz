@@ -14,6 +14,7 @@ class Grapher
     g[:tooltip] = ' '
     g[:label] = "Ansible dependencies"
     g[:fontsize] = 36
+    g.rank_fn = Proc.new {|node| rank_node(node) }
 
     add_nodes(g, dict)
     connect_playbooks(g, dict)
@@ -32,6 +33,18 @@ class Grapher
     g
   end
 
+  def rank_node(node)
+    if node.data == nil
+      return nil
+    end
+    case node.data[:type]
+    when :playbook then :source
+    when :task then :task
+#    when :var then :sink
+    else nil
+    end
+  end
+
   def add_node(g, it)
     node = GNode[it[:fqn]]
     node.data = it
@@ -46,7 +59,7 @@ class Grapher
         add_node(g, task)
         task[:var].each {|var| add_node(g, var) }
       }
-      role[:varfile].each {|vf|
+      (role[:varfile] + role[:vardefaults]).each {|vf|
         add_node(g, vf)
         vf[:var].each {|v| add_node(g, v) }
       }
@@ -275,19 +288,5 @@ class Grapher
     legend[:label] = "Legend"
     legend[:fontsize] = 36
     legend
-  end
-end
-
-
-# This is accessed as a global from graph_viz.rb, EWW
-def rank_node(node)
-  if node.data == nil
-    return nil
-  end
-  case node.data[:type]
-  when :playbook then :source
-  when :task, :varfile then :same
-  when :var then :sink
-  else nil
   end
 end

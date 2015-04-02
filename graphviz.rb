@@ -126,6 +126,7 @@ class Graph
   @@cluster_counter = 0
   attr_accessor :nodes, :edges, :subgraphs, :attrs
   attr_accessor :is_cluster, :name
+  attr_accessor :rank_fn
 
   def initialize(nodes = [], edges = [], attrs = {})
     @nodes = Set[*nodes]
@@ -135,6 +136,7 @@ class Graph
     @subgraphs = []
     @is_cluster = false
     @name = 'Graph'
+    @rank_fn = Proc.new {|node| nil }
   end
 
   def initialize_copy(src)
@@ -297,7 +299,7 @@ def g2dot(graph, is_subgraph=false)
 
   dot_ranks = graph.nodes.
     # TODO pass rank_node in somehow
-    classify {|v| rank_node(v) }.
+    classify {|n| graph.rank_fn.call(n) }.
     map {|k,v|
       rnodes = v.map {|n|
         n.node + wrapattrs(n.attrs) +";"
@@ -328,8 +330,4 @@ def g2dot(graph, is_subgraph=false)
   body = subgraphs.join("\n  ") + body + "\n"
 
   "#{gtype} \"#{gname}\" {\n  #{body}}\n"
-end
-
-def rank_node(n)
-  nil
 end

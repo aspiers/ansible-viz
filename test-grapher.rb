@@ -38,6 +38,7 @@ class TC_Grapher < Test::Unit::TestCase
     thing(task, :var, "fff")  # fact
     varfile = thing(role, :varfile, "sss")
     var = thing(varfile, :var, "vvv")
+    role[:vardefaults] = []
     playbook = thing(d, :playbook, "ppp", {:role => [role], :task => [task]})
 
     Grapher.new.add_nodes(@g, d)

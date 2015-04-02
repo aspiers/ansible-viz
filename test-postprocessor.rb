@@ -13,10 +13,11 @@ class TC_PostprocessorA < Test::Unit::TestCase
   def test_role
     Postprocessor.new.process_role(@d, @roleA)
 
-    assert_keys @roleA, :role_deps, :task, :main_task, :varfile
+    assert_keys @roleA, :role_deps, :task, :main_task, :varfile, :vardefaults
     assert_has_all %w(), @roleA[:role_deps].smap(:name)
     assert_has_all %w(main taskA taskB), @roleA[:task].smap(:name)
-    assert_has_all %w(defaults main maininc extra), @roleA[:varfile].smap(:name)
+    assert_has_all %w(main maininc extra), @roleA[:varfile].smap(:name)
+    assert_has_all %w(main), @roleA[:vardefaults].smap(:name)
   end
 
   def test_main
@@ -74,10 +75,11 @@ class TC_Postprocessor1 < Test::Unit::TestCase
   def test_role
     Postprocessor.new.process_role(@d, @role1)
 
-    assert_keys @role1, :role_deps, :task, :main_task, :varfile
+    assert_keys @role1, :role_deps, :task, :main_task, :varfile, :vardefaults
     assert_has_all %w(roleA), @role1[:role_deps]
     assert_has_all %w(main task1 task2), @role1[:task].smap(:name)
-    assert_has_all %w(defaults main maininc extra), @role1[:varfile].smap(:name)
+    assert_has_all %w(main maininc extra), @role1[:varfile].smap(:name)
+    assert_has_all %w(main), @role1[:vardefaults].smap(:name)
   end
 
   def test_main

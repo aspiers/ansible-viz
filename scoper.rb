@@ -123,11 +123,11 @@ class Scoper
     role = task[:parent]
     if role[:scope] == nil
       main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
-      vardefaults = role[:varfile].find {|vf| vf[:type] == :vardefaults } || {:var => []}
+      defaults = role[:vardefaults].flat_map {|vf| vf[:var] }
       # role[:scope] should really only be set after the main task has been handled.
       # main can include other tasks though, so to break the circular dependency, allow
       # a partial role[:scope] of just the vars, defaults and dependent roles' scopes.
-      role[:scope] = main_vf[:var] + vardefaults[:var] +
+      role[:scope] = main_vf[:var] + defaults +
                      role[:role_deps].flat_map {|d| d[:scope] }
     end
     # This list must be in ascending precedence order
