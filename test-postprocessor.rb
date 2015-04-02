@@ -58,7 +58,8 @@ class TC_PostprocessorA < Test::Unit::TestCase
     playbookA = Loader.new.mk_playbook(@d, "sample", "playbookA.yml")
     Postprocessor.new.process_playbook(@d, playbookA)
 
-    assert_keys playbookA, :data, :role, :task
+    assert_keys playbookA, :data, :include, :role, :task
+    assert_has_all [], playbookA[:include]
     assert_has_all [@roleA], playbookA[:role]
     assert_has_all %w(taskA), playbookA[:task].smap(:name)
   end
@@ -120,7 +121,8 @@ class TC_Postprocessor1 < Test::Unit::TestCase
     playbook1 = Loader.new.mk_playbook(@d, "sample", "playbook1.yml")
     Postprocessor.new.process_playbook(@d, playbook1)
 
-    assert_keys playbook1, :data, :role, :task
+    assert_keys playbook1, :data, :include, :role, :task
+    assert_has_all ["playbookA.yml"], playbook1[:include]
     assert_has_all [@role1, @roleA], playbook1[:role]
     assert_has_all %w(task1 taskA), playbook1[:task].smap(:name)
   end

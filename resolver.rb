@@ -11,12 +11,23 @@ class Resolver
   # Ensure you've loaded the whole bag before trying to resolve it.
 
   def process(dict)
+    dict[:playbook].each {|playbook|
+      resolve_playbook_includes(dict, playbook)
+    }
     dict[:role].each {|role|
       resolve_role_deps(dict, role)
     }
     dict[:task].each {|task|
       resolve_task_includes(dict, task)
       resolve_task_include_vars(dict, task)
+    }
+  end
+
+  def resolve_playbook_includes(dict, playbook)
+    playbook[:include].map! {|name|
+      name.sub!(/.yml$/, '')
+      dict[:playbook].find {|pb| pb[:name] == name } or
+        raise "Playbook '#{playbook[:fqn]}' includes a playbook we don't have: #{name}"
     }
   end
 
@@ -72,7 +83,7 @@ class Resolver
         else
           raise "Unhandled include_vars: #{name}"
         end
-      rescue Exception => e
+      rescue Exception
         puts "Problem resolving task '#{task[:fqn]}' include_vars: '#{name}'"
         raise
       end

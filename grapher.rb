@@ -34,15 +34,7 @@ class Grapher
   end
 
   def rank_node(node)
-    if node.data == nil
       return nil
-    end
-    case node.data[:type]
-    when :playbook then :source
-    when :task then :task
-#    when :var then :sink
-    else nil
-    end
   end
 
   def add_node(g, it)
@@ -83,6 +75,10 @@ class Grapher
 
   def connect_playbooks(g, dict)
     dict[:playbook].each {|playbook|
+      (playbook[:include] || []).each {|pb|
+        edge = add_edge(g, playbook, pb, "includes")
+        style(edge, :include_playbook)
+      }
       (playbook[:role] || []).each {|role|
         add_edge(g, playbook, role, "includes")
       }
@@ -136,9 +132,10 @@ class Grapher
       n.data[:name] == 'main'
     }.each {|n|
       inc_node = n.inc_nodes[0]
-      n.out.each {|e| e.snode = inc_node }
-      n.out = Set[]
+      edges = n.out.dup
       g.cut n
+      edges.each {|e| e.snode = inc_node }
+      g.add(*edges)
     }
 
     # Elide var usage from things which define the var
@@ -149,7 +146,6 @@ class Grapher
 #      n.inc
 #    }
   end
-
 
   ########## DECORATE ###########
 
@@ -206,6 +202,7 @@ class Grapher
     :call_task => {:color => 'blue',
                    :style => 'dashed'},
     :call_extra_task => {:color => 'red'},
+    :include_playbook => {:color => 'red'},
   }
 
   def style(node_or_edge, style)
@@ -254,6 +251,22 @@ class Grapher
     }
   end
 
+
+  def extract_unlinked(g)
+    spare = g.nodes.find_all {|n|
+      (n.inc_nodes + n.out_nodes).length == 0
+    }
+    g.cut(*spare)
+
+    unlinked = Graph.new_cluster('unlinked')
+    unlinked.add(*spare)
+    unlinked[:bgcolor] = Grapher.hsl(15, 0, 97)
+    unlinked[:label] = "Unlinked nodes"
+    unlinked[:fontsize] = 36
+    unlinked.rank_fn = Proc.new {|node| node.data[:type] }
+    unlinked
+  end
+
   def mk_legend
     types = [:playbook, :role, :task, :varfile, :vardefaults, :var]
     nodes = Hash[*(types.flat_map {|type|
@@ -270,6 +283,8 @@ class Grapher
     nodes[:fact] = style(GNode["Fact"], :var_fact)
     edges = [
       GEdge[nodes[:playbook], nodes[:role], {:label => "calls"}],
+      style(GEdge[nodes[:playbook], nodes[:playbook], {:label => "include"}],
+          :include_playbook),
       style(GEdge[nodes[:playbook], nodes[:task], {:label => "calls extra task"}],
           :call_extra_task),
       GEdge[nodes[:role], nodes[:task], {:label => "defines"}],
@@ -299,6 +314,12 @@ class Grapher
       [e1, e2]
     }
     legend = Graph.new_cluster('legend')
+    legend.rank_fn = Proc.new {|node|
+      case node
+      when nodes[:task], nodes[:varfile], nodes[:vardefaults] then 5
+      else nil
+      end
+    }
     legend.add(*edges)
     legend[:bgcolor] = Grapher.hsl(15, 3, 100)
     legend[:label] = "Legend"

@@ -268,6 +268,10 @@ class Graph
     Graph.new(keep_nodes, keep_edges, @attrs)
   end
 
+  def rank_nodes
+    @nodes.classify {|n| @rank_fn.call(n) }
+  end
+
   def inspect
     [(Graph.include_hashes and "Hash: ##{hash}" or nil),
      "Nodes:",
@@ -294,40 +298,37 @@ def wrapattrs(h)
   a.length > 0 and " [#{a}]" or ""
 end
 
-def g2dot(graph, is_subgraph=false)
-  dot_attrs = joinattrs(graph.attrs)
+def g2dot(graph, level=0)
+  gtype = ((level > 0 and "subgraph") or "digraph")
+  gname = ((graph.is_cluster and "cluster#{graph.name}") or graph.name)
 
-  dot_ranks = graph.nodes.
-    # TODO pass rank_node in somehow
-    classify {|n| graph.rank_fn.call(n) }.
-    map {|k,v|
-      rnodes = v.map {|n|
-        n.node + wrapattrs(n.attrs) +";"
-      }.join("\n    ")
+  # Subgraphs go first so they don't inherit attributes
+  body = []
+  body += graph.subgraphs.flat_map {|sg| g2dot(sg, level + 1).split("\n") }
+  body += joinattrs(graph.attrs)
 
-      case k
-      when nil then rnodes
-      when :source, :min, :max, :sink
-        "{ rank = #{k};\n    #{rnodes} }"
-      else
-        "{ rank = same;\n    #{rnodes} }"
-      end
-    }
+  body += graph.rank_nodes.
+      flat_map {|k,v|
+        rnodes = v.map {|n|
+          n.node + wrapattrs(n.attrs) +";"
+        }
+        tab_rnodes = rnodes.map {|line| "  " + line }
 
-  dot_edges = graph.edges.map {|e|
+        case k
+        when nil then rnodes
+        when :source, :min, :max, :sink
+          ["{ rank = #{k};", *tab_rnodes, "}"]
+        when :same
+          raise "Don't use 'same' rank directly"
+        else
+          ["{ rank = same;", *tab_rnodes, "}"]
+        end
+      }
+  body += graph.edges.map {|e|
     "#{e.snode.node} -> #{e.dnode.node}#{wrapattrs(e.attrs)};"
   }
 
-  subgraphs = graph.subgraphs.map {|sg| g2dot(sg, true)
-  }.map {|dot| dot.gsub(/^/, "  ") }
-
-  gtype = ((is_subgraph and "subgraph") or "digraph")
-  gname = ((graph.is_cluster and "cluster#{graph.name}") or graph.name)
-  body = (dot_attrs + dot_ranks + dot_edges).reject {|line|
-      line.length == 0
-    }.join("\n  ")
-  # Subgraphs go first so they don't inherit attributes
-  body = subgraphs.join("\n  ") + body + "\n"
-
-  "#{gtype} \"#{gname}\" {\n  #{body}}\n"
+  body.map! {|line| "  " + line }
+  ["#{gtype} \"#{gname}\" {", *body, "}"].
+    map {|line| line + "\n" }.join("")
 end

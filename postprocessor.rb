@@ -37,23 +37,36 @@ class Postprocessor
   end
 
   def process_playbook(dict, playbook)
-    data = playbook[:data][0]
-    playbook[:role] = (data['roles'] || []).map {|role|
-      if role.instance_of? Hash
-        role = role['role']
-      end
-      dict[:role].find {|r| r[:name] == role }
-    }.uniq  # FIXME
+    playbook[:include] = []
+    playbook[:role] = []
+    playbook[:task] = []
 
-    playbook[:task] = (data['tasks'] || []).map {|task_h|
-      path = task_h['include'].split(" ")[0]
-      if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
-        raise "Bad include from playbook #{playbook[:name]}: #{path}"
+    playbook[:data].each {|data|
+      if data.keys.include? 'include'
+        playbook[:include].push data['include']
       end
-      role, task = $1, $2
-      role = dict[:role].find {|r| r[:name] == role }
-      role[:task].find {|t| t[:name] == task }
-    }.compact.uniq  # FIXME
+
+      playbook[:role] += (data['roles'] || []).map {|role|
+        if role.instance_of? Hash
+          role = role['role']
+        end
+        dict[:role].find {|r| r[:name] == role }
+      }
+
+      playbook[:task] += (data['tasks'] || []).map {|task_h|
+        path = task_h['include'].split(" ")[0]
+        if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
+          raise "Bad include from playbook #{playbook[:name]}: #{path}"
+        end
+        role, task = $1, $2
+        role = dict[:role].find {|r| r[:name] == role }
+        role[:task].find {|t| t[:name] == task }
+      }
+    }
+
+#    playbook[:include].uniq!
+#    playbook[:role].uniq!
+    playbook[:task].uniq!
   end
 
   def process_task(dict, task)

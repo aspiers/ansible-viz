@@ -55,11 +55,13 @@ def render(data, options)
   g[:rankdir] = 'LR'
   g.is_cluster = true
 
+  unlinked = grapher.extract_unlinked(g)
   legend = grapher.mk_legend
 
   superg = Graph.new
-  superg.add g, legend
+  superg.add g, unlinked, legend
   superg[:rankdir] = 'LR'
+  superg[:ranksep] = 2
   superg[:tooltip] = ' '
   superg
 end
