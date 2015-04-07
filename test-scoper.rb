@@ -11,7 +11,9 @@ require './scoper'
 
 class TC_FindVars < Test::Unit::TestCase
   def try(expect, input)
-    assert_equal expect, Scoper.new.find_vars(input)
+    role = thing({}, :role, "role")
+    task = thing(role, :task, "task1")
+    assert_equal expect, Scoper.new.find_vars(task, input)
   end
 
   def test_str
@@ -19,27 +21,27 @@ class TC_FindVars < Test::Unit::TestCase
   end
 
   def test_list
-    try %w(1 2), ["{{1}}", "{{2}}"]
+    try %w(a b), ["{{a}}", "{{b}}"]
   end
 
   def test_hash
-    try %w(1 2), {:a => "{{1}}", :b => "{{2}}"}
+    try %w(a b), {:a => "{{a}}", :b => "{{b}}"}
   end
 
   def test_nesting
-    try %w(1 2 3), {:a => ["{{1}}", "{{2}}"], :b => "{{3}}"}
+    try %w(a b c), {:a => ["{{a}}", "{{b}}"], :b => "{{c}}"}
   end
 
   def test_bar
-    try %w(1 2), "{{1|up(2)}}"
+    try %w(a b), "{{a|up(b)}}"
   end
 
   def test_stdout
-    try [], "{{1.stdout}}"
+    try [], "{{a.stdout}}"
   end
 
   def test_complex
-    try %w(1 2), "{{1 | up(2 | default({}))}}"
+    try %w(a b), "{{a | up(b | default({}))}}"
   end
 end
 
