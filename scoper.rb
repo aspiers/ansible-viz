@@ -47,7 +47,7 @@ class Scoper
 
         # TODO control this with a flag
         task[:used_vars] = task[:used_vars].flat_map {|v|
-          v =~ /(_default|_updates)$/ and [] or [v]
+          v =~ /_default$/ and [] or [v]
         }.uniq
 
         raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
