@@ -10,6 +10,7 @@ class Postprocessor
   def process(dict)
     dict[:role].each {|role| process_role(dict, role) }
     dict[:task] = dict[:role].flat_map {|role| role[:task] }
+    # Must process playbooks after tasks
     dict[:playbook].each {|playbook| process_playbook(dict, playbook) }
   end
 
@@ -36,6 +37,15 @@ class Postprocessor
     }
   end
 
+  def parse_include(s, d=false)
+    elements = s.split(" ")
+    taskname = elements.shift
+    args = elements.join(" ").gsub(/{{(.*?)}}/, "x").split(" ")
+    args = args.map {|i| i.split("=")[0] }
+    args = args.reject {|a| a == 'tags' }
+    [taskname, args]
+  end
+
   def process_playbook(dict, playbook)
     playbook[:include] = []
     playbook[:role] = []
@@ -54,13 +64,15 @@ class Postprocessor
       }
 
       playbook[:task] += (data['tasks'] || []).map {|task_h|
-        path = task_h['include'].split(" ")[0]
+        path, args = parse_include(task_h['include'])
         if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
           raise "Bad include from playbook #{playbook[:name]}: #{path}"
         end
-        role, task = $1, $2
-        role = dict[:role].find {|r| r[:name] == role }
-        role[:task].find {|t| t[:name] == task }
+        rolename, taskname = $1, $2
+        role = dict[:role].find {|r| r[:name] == rolename }
+        task = role[:task].find {|t| t[:name] == taskname }
+        task[:args] += args
+        task
       }
     }
 
@@ -72,9 +84,12 @@ class Postprocessor
   def process_task(dict, task)
     data = task[:data]
 
+    task[:args] = []
+    task[:included_by_tasks] = []
+
     task[:included_tasks] = data.find_all {|i|
       i.is_a? Hash and i['include']
-    }.map {|i| i['include'].split(" ")[0] }
+    }.map {|i| parse_include(i['include'], true) }
 
     task[:included_varfiles] = data.find_all {|i|
       i.is_a? Hash and i['include_vars']

@@ -6,10 +6,15 @@ require './ansible-viz'
 class TC_Loader < Test::Unit::TestCase
   def test_thing
     d = {}
+
     it = thing(d, :abc, "def", {"ghi" => "jkl"})
     it2 = thing(it, :xyz, "456")
-    assert_equal({:type=>:abc, :name=>"def", :fqn=>"def", "ghi"=>"jkl", :xyz=>[it2]}, it)
-    assert_equal({:type=>:xyz, :name=>"456", :fqn=>"def::456", :parent=>it}, it2)
+
+    thing1 = {:type=>:abc, :name=>"def", :fqn=>"def", "ghi"=>"jkl", :xyz=>[it2]}
+    assert_equal(thing1, it)
+
+    thing2 = {:type=>:xyz, :name=>"456", :fqn=>"def::456", :parent=>it}
+    assert_equal(thing2, it2)
     assert_has_all d[:abc], [it]
   end
 

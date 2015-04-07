@@ -75,16 +75,16 @@ class TC_Scoper < Test::Unit::TestCase
 
   def test_scope
     @s.process(@d)
-    mainApre = %w(defA varAmain factB)
+    mainApre = %w(defA varAmain factB meow)
     mainA = mainApre + %w(varAmaininc factAmain)
     main1pre = mainA + %w(def1 var1main fact2)
     main1 = main1pre + %w(var1maininc fact1main)
     scopes = [[@roleA, "taskB", mainApre + %w(factB)],
               [@roleA, "main", mainA],
-              [@roleA, "taskA", mainA + %w(varAextra factB factAunused)],
+              [@roleA, "taskA", mainA + %w(varAextra factB factAunused service)],
               [@role1, "task2", main1pre + %w(fact2)],
               [@role1, "main", main1],
-              [@role1, "task1", main1 + %w(var1extra fact2 fact1unused)]]
+              [@role1, "task1", main1 + %w(var1extra fact2 fact1unused service)]]
     scopes.each {|role, tn, scope|
       task = role[:task].find {|t| t[:name] == tn }
       assert_not_nil task

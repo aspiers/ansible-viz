@@ -1,7 +1,7 @@
 ---
 - include_vars: maininc.yml
 
-- include: task2.yml
+- include: task2.yml meow=111
 
 - name: part1 | Role 1 main
   blah: "{{ factAmain | defA |

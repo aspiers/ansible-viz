@@ -21,6 +21,10 @@ class Resolver
       resolve_task_includes(dict, task)
       resolve_task_include_vars(dict, task)
     }
+    dict[:task].each {|task|
+      task[:included_by_tasks].uniq!
+      resolve_args(dict, task)
+    }
   end
 
   def resolve_playbook_includes(dict, playbook)
@@ -40,6 +44,14 @@ class Resolver
     role[type].find {|t| t[:name] == name } or
       raise "Failed to find #{type}: #{role[:name]}::#{name}"
   end
+  def find_task(dict, role, name)
+    if name =~ %r!../../([^/]+)/tasks/([^/]+.yml)!
+      role = find_role(dict, $1)
+      name = $2
+    end
+    name = name.sub(/\.yml$/, '')
+    find_on_role(dict, role, :task, name)
+  end
 
   def resolve_role_deps(dict, role)
     role[:role_deps] = role[:role_deps].map {|depname|
@@ -52,17 +64,13 @@ class Resolver
   end
 
   def resolve_task_includes(dict, task)
-    task[:included_tasks].map! {|name|
-      role = task[:parent]
-      if name =~ %r!../../([^/]+)/tasks/([^/]+.yml)!
-        role = dict[:role].find {|r| r[:name] == $1 }
-        name = $2
-      end
-      name.sub!(/\.yml$/, '')
-      incl_task = role[:task].find {|t| t[:name] == name }
+    task[:included_tasks].map! {|name, args|
+      incl_task = find_task(dict, task[:parent], name)
       if incl_task == nil
         raise "Task #{task[:fqn]} failed to find included task: #{name}.yml"
       end
+      incl_task[:args] += args
+      incl_task[:included_by_tasks].push task
       incl_task
     }
   end
@@ -70,9 +78,7 @@ class Resolver
   def resolve_task_include_vars(dict, task)
     task[:included_varfiles].map! {|name|
       begin
-        if name =~ %r!^([^/]+).yml!
-          find_on_role(dict, task[:parent], :varfile, $1)
-        elsif name =~ %r!^../vars/([^/]+).yml!
+        if name =~ %r!^([^/]+).yml! or name =~ %r!^../vars/([^/]+).yml!
           find_on_role(dict, task[:parent], :varfile, $1)
         elsif name =~ %r!^../defaults/([^/]+).yml!
           find_on_role(dict, task[:parent], :vardefaults, $1)
@@ -91,5 +97,11 @@ class Resolver
     if task[:included_varfiles].include?(nil)
       raise "Task #{task[:fqn]} has nil varfiles"
     end
+  end
+
+  def resolve_args(dict, task)
+    task[:args] = task[:args].uniq.map {|arg|
+      thing(task, :var, arg, {:defined => true})
+    }
   end
 end

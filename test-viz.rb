@@ -8,8 +8,8 @@ def assert_has_all(e, a, m="")
   if m != ""
     m += ": "
   end
-  missing = a - e
-  extra = e - a
+  missing = e - a
+  extra = a - e
   assert_equal [[], []], [missing, extra], "#{m}missing/extra items"
 end
 

@@ -23,15 +23,19 @@ class Scoper
 
     find_var_uses(dict)
 
-    order = order_tasks(dict[:role])
+    bottomup = order_tasks(dict[:role])
+    topdown = bottomup.reverse
 #    puts order.map {|r| r[:name] }.join(" ")
-    order.each {|task|
+    topdown.each {|task|
+      propagate_args(dict, task)
+    }
+    bottomup.each {|task|
       calc_scope(dict, task)
       task[:scope].each {|var|
         var[:used] = []
       }
     }
-    order.reverse.each {|task|
+    topdown.each {|task|
       check_used_vars(dict, task)
     }
   end
@@ -52,6 +56,13 @@ class Scoper
 
         raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
       }
+    }
+  end
+
+  def propagate_args(dict, task)
+    # Copy :args down to every task this one includes
+    task[:included_tasks].each {|t|
+      t[:args] += task[:args]
     }
   end
 
@@ -95,7 +106,7 @@ class Scoper
     # rubypython gem didn't work for me, with Ruby 1.9.3 or 2.2.1.
     rej = %w(ansible_env join int item dirname basename regex_replace search
              is defined failed skipped success True False update in
-             vagrant_version Vagrant)
+             Vagrant)
     data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).
       map {|m| m[0] }.
 #      map {|s| if s =~ /virsh_vol_list_result/ then pp s end; s }.
@@ -211,9 +222,11 @@ class Scoper
       role[:scope] = main_vf[:var] + defaults +
                      role[:role_deps].flat_map {|d| d[:scope] }
     end
+
     # This list must be in ascending precedence order
     task[:debug] = {
       :incl_varfiles => task[:included_varfiles].flat_map {|vf| vf[:var] },
+      :args => task[:args],
       :incl_scopes => task[:included_tasks].flat_map {|t| t[:scope] },
       :role_scope => role[:scope],
       :facts => task[:var]

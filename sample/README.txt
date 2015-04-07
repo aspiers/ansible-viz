@@ -10,7 +10,7 @@ roleA/vars/extra.yml
     Sets varAextra.
 roleA/tasks/main
     Includes vars from maininc.yml
-    Includes taskB.
+    Includes taskB, setting meow=AAA.
     Sets + uses factAmain.
     Uses defA, varAmain, varAmaininc, varAundef (UNDEFINED).
 roleA/tasks/taskA

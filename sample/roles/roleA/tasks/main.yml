@@ -1,7 +1,7 @@
 ---
 - include_vars: maininc.yml
 
-- include: taskB.yml
+- include: taskB.yml meow=AAA
 
 - name: main | Role A main
   set_fact:
