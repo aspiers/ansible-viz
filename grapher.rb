@@ -285,7 +285,7 @@ class Grapher
     nodes[:default_var] = style(GNode["Default"], :var_default)
     nodes[:unused] = style(GNode["Unused var"], :var_unused)
     nodes[:undefined] = style(GNode["Undefined var"], :var_undefined)
-    nodes[:fact] = style(GNode["Fact"], :var_fact)
+    nodes[:fact] = style(GNode["Fact / Argument"], :var_fact)
     edges = [
       GEdge[nodes[:playbook], nodes[:role], {:label => "calls"}],
       style(GEdge[nodes[:playbook], nodes[:playbook], {:label => "include"}],

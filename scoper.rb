@@ -104,7 +104,7 @@ class Scoper
     # and it strips strings really badly.
     # Maybe use the Python ast module? Oh wait we're in Ruby.
     # rubypython gem didn't work for me, with Ruby 1.9.3 or 2.2.1.
-    rej = %w(ansible_env join int item dirname basename regex_replace search
+    rej = %w(join int item dirname basename regex_replace search
              is defined failed skipped success True False update in
              Vagrant)
     data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).
@@ -132,6 +132,7 @@ class Scoper
       map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
       reject {|s| rej.include? s }.
       reject {|s| s =~ /^\d*$/ }.
+      reject {|s| s =~ /^ansible_/ }.
       reject {|s| s.empty? }
   end
 
