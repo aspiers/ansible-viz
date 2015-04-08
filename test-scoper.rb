@@ -13,7 +13,7 @@ class TC_FindVars < Test::Unit::TestCase
   def try(expect, input)
     role = thing({}, :role, "role")
     task = thing(role, :task, "task1")
-    assert_equal expect, Scoper.new.find_vars(task, input)
+    assert_equal expect, Scoper.new.find_vars_in_task(task, input)
   end
 
   def test_str
@@ -42,6 +42,10 @@ class TC_FindVars < Test::Unit::TestCase
 
   def test_complex
     try %w(a b), "{{a | up(b | default({}))}}"
+  end
+
+  def test_array
+    try %w(con), "{{ con['aaa-bbb']['ccc'] }}"
   end
 end
 

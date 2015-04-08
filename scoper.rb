@@ -36,14 +36,31 @@ class Scoper
       }
     }
     topdown.each {|task|
-      check_used_vars(dict, task)
+      check_used_vars_for_task(dict, task)
+    }
+#    dict[:vars_by_name] = Hash[*(dict[:role].flat_map {|r|
+#      [:task, :varfile, :vardefaults].
+#        flat_map {|sym| r[sym] }.
+#        flat_map {|t| t[:var] }.
+#        map {|v| [v[:name], v] }
+#    })]
+    dict[:vars_by_name] = Hash[*(dict[:role].flat_map {|r|
+      [:task, :varfile, :vardefaults].
+        flat_map {|sym| r[sym] }.
+        flat_map {|t| t[:var] }.
+        flat_map {|v| [v[:name], v] }
+    })]
+    dict[:role].each {|role|
+      (role[:varfile] + role[:vardefaults]).each {|vf|
+        check_used_vars_for_varfile(dict, vf)
+      }
     }
   end
 
   def find_var_uses(dict)
     dict[:role].each {|role|
       role[:task].each {|task|
-        task[:used_vars] = find_vars(task, task[:data]).uniq
+        task[:used_vars] = find_vars_in_task(task, task[:data]).uniq
 
         # Exclude "vars" which are actually registered resultsets
         registers = find_registers(task, task[:data])
@@ -55,6 +72,10 @@ class Scoper
         }.uniq
 
         raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
+      }
+
+      (role[:varfile] + role[:vardefaults]).each {|vf|
+        vf[:used_vars] = find_vars_in_varfile(vf, vf[:data]).uniq
       }
     }
   end
@@ -88,11 +109,20 @@ class Scoper
     }
   end
 
-  def find_vars(task, data)
+  def find_vars_in_task(task, data)
     walk(data) {|type, obj|
       case type
       when :hash
         find_vars_in_with_and_when(task, obj)
+      when :scalar
+        find_vars_in_string(obj)
+      end
+    }
+  end
+
+  def find_vars_in_varfile(varfile, data)
+    walk(data) {|type, obj|
+      case type
       when :scalar
         find_vars_in_string(obj)
       end
@@ -240,7 +270,7 @@ class Scoper
     end
   end
 
-  def check_used_vars(dict, task)
+  def check_used_vars_for_task(dict, task)
     # By this point, each task has a :scope of [Var].
     # We simply need to compare used_vars ([string]) with the vars and mark them used.
     scope_by_name = Hash[*(task[:scope].flat_map {|v| [v[:name], v] })]
@@ -253,6 +283,28 @@ class Scoper
       var[:used].push task
       task[:uses] ||= Set[]
       task[:uses].add var
+    }
+  end
+
+  def check_used_vars_for_varfile(dict, vf)
+    vf[:used_vars].each {|use|
+      # Figuring out the varfile scope is pretty awful since it could be included
+      # from anywhere. Let's just mark vars used.
+      var = vf[:var].find {|v| v[:name] == use }
+      if var == nil
+        # Using a heuristic of "if you have two vars with the same name
+        # then you're a damned fool".
+        var = dict[:vars_by_name][use]
+      end
+      if var == nil
+#        puts "Can't find var anywhere: #{use}"
+        next
+      end
+      var[:used] ||= []
+      var[:used].push vf
+      vf[:uses] ||= Set[]
+      vf[:uses].add var
+#      puts "#{vf[:fqn]} -> #{var[:fqn]}"
     }
   end
 end

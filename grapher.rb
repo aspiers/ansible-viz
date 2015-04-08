@@ -135,7 +135,6 @@ class Grapher
 
     task[:included_tasks].each {|incl_task|
       privet = (task[:parent] != incl_task[:parent] and incl_task[:name][0] == '_')
-#      privet = !privet
       style = if privet then :private else :includes_task end
       styler.style(add_edge(g, task, incl_task, "includes task"), style)
     }
@@ -143,9 +142,9 @@ class Grapher
 
   def connect_usage(g, dict, styler)
     dict[:role].each {|role|
-      role[:task].each {|task|
-        (task[:uses] || []).each {|var|
-          edge = add_edge(g, task, var, "uses var")
+      (role[:task] + role[:varfile] + role[:vardefaults]).each {|thing|
+        (thing[:uses] || []).each {|var|
+          edge = add_edge(g, thing, var, "uses var")
           styler.style(edge, :use_var)
         }
       }
