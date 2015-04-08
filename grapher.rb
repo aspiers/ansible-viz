@@ -19,7 +19,9 @@ class Grapher
     add_nodes(g, dict, styler)
     connect_playbooks(g, dict, styler)
     connect_roles(g, dict, styler)
-    connect_usage(g, dict, styler)
+    if options.show_usage
+      connect_usage(g, dict, styler)
+    end
 
     styler.decorate(g, dict, options)
 

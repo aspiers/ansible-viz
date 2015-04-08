@@ -23,6 +23,7 @@ def get_options()
   options.format = :hot
   options.output_filename = "viz.html"
   options.show_vars = false
+  options.show_usage = true
 
   OptionParser.new do |o|
     o.banner = "Usage: ansible-viz.rb [options] <path-to-playbooks>"
@@ -30,8 +31,12 @@ def get_options()
       options.output_filename = fname
     end
     o.on("--vars",
-         "Include vars. WARNING: unused/undefined support is EXPERIMENTAL.") do |val|
+         "Include vars. Unused/undefined detection still has minor bugs.") do |val|
       options.show_vars = true
+    end
+    o.on("--no-usage",
+         "Don't connect vars to where they're used.") do |val|
+      options.show_usage = false
     end
     o.on_tail("-h", "--help", "Show this message") do
       puts o
