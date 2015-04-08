@@ -11,7 +11,7 @@ class TC_Grapher < Test::Unit::TestCase
   end
 
   def w
-    write(@g, "test.html")
+#    write(@g, "test.html")
   end
 
   def test_full
@@ -41,7 +41,8 @@ class TC_Grapher < Test::Unit::TestCase
     role[:vardefaults] = []
     playbook = thing(d, :playbook, "ppp", {:role => [role], :task => [task]})
 
-    Grapher.new.add_nodes(@g, d)
+    styler = Styler.new
+    Grapher.new.add_nodes(@g, d, styler)
 
     assert_equal 6, @g.nodes.length
   end

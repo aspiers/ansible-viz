@@ -37,7 +37,7 @@ class Postprocessor
     }
   end
 
-  def parse_include(s, d=false)
+  def parse_include(s)
     elements = s.split(" ")
     taskname = elements.shift
     args = elements.join(" ").gsub(/{{(.*?)}}/, "x").split(" ")
@@ -89,7 +89,7 @@ class Postprocessor
 
     task[:included_tasks] = data.find_all {|i|
       i.is_a? Hash and i['include']
-    }.map {|i| parse_include(i['include'], true) }
+    }.map {|i| parse_include(i['include']) }
 
     task[:included_varfiles] = data.find_all {|i|
       i.is_a? Hash and i['include_vars']
