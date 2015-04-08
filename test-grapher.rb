@@ -42,7 +42,7 @@ class TC_Grapher < Test::Unit::TestCase
     playbook = thing(d, :playbook, "ppp", {:role => [role], :task => [task]})
 
     styler = Styler.new
-    Grapher.new.add_nodes(@g, d, styler)
+    Grapher.new.add_nodes(@g, d, styler, true)
 
     assert_equal 6, @g.nodes.length
   end

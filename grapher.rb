@@ -16,7 +16,7 @@ class Grapher
     g.rank_fn = Proc.new {|node| rank_node(node) }
 
     styler = Styler.new
-    add_nodes(g, dict, styler)
+    add_nodes(g, dict, styler, options.show_usage)
     connect_playbooks(g, dict, styler)
     connect_roles(g, dict, styler)
     if options.show_usage
@@ -25,7 +25,7 @@ class Grapher
 
     styler.decorate(g, dict, options)
 
-    hide_dullness(g, dict)
+#    hide_dullness(g, dict)
 
     if not options.show_vars
       to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
@@ -46,17 +46,23 @@ class Grapher
     g.add(node)
   end
 
-  def add_nodes(g, dict, styler)
+  def add_nodes(g, dict, styler, show_usage)
+    vars = []
     dict[:role].each {|role|
       add_node(g, role)
       role[:task].each {|task|
         add_node(g, task)
-        task[:var].each {|var| add_node(g, var) }
+        vars += task[:var]
       }
       (role[:varfile] + role[:vardefaults]).each {|vf|
         add_node(g, vf)
-        vf[:var].each {|v| add_node(g, v) }
+        vars += vf[:var]
       }
+    }
+    vars.each {|v|
+      if show_usage or v[:defined]
+        add_node(g, v)
+      end
     }
     dict[:playbook].each {|playbook|
       add_node(g, playbook)
@@ -119,7 +125,7 @@ class Grapher
   end
 
   def connect_task(g, dict, task, styler)
-    add_edge(g, task[:parent], task, "calls task")
+    add_edge(g, task, task[:parent], "is part of")
 
     task[:var].each {|var|
       if var[:defined]
@@ -167,6 +173,8 @@ class Grapher
 #    }
   end
 
+  # This helps prevent unlinked nodes distorting the graph when it's all messed up.
+  # Normally there shouldn't be (m)any unlinked nodes.
   def extract_unlinked(g)
     spare = g.nodes.find_all {|n|
       (n.inc_nodes + n.out_nodes).length == 0

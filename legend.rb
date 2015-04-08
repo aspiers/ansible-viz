@@ -30,7 +30,7 @@ class Legend
       styler.style(GEdge[nodes[:playbook], nodes[:task], {:label => "calls task"}],
           :call_task),
       styler.style(GEdge[nodes[:role], nodes[:role], {:label => "includes"}], :includes_role),
-      GEdge[nodes[:role], nodes[:task], {:label => "defines"}],
+      GEdge[nodes[:task], nodes[:role], {:label => "is part of"}],
       GEdge[nodes[:role], nodes[:varfile], {:label => "provides"}],
       GEdge[nodes[:role], nodes[:main_var], {:label => "main vars define"}],
       GEdge[nodes[:role], nodes[:main_default], {:label => "main defaults define"}],
@@ -54,16 +54,13 @@ class Legend
         ee[:label] = nil
       }
       e1[:arrowhead] = 'none'
+      [e1, e2].each {|ee|
+        ee[:weight] ||= 1
+      }
 
       [e1, e2]
     }
     legend = Graph.new_cluster('legend')
-    legend.rank_fn = Proc.new {|node|
-      case node
-      when nodes[:task], nodes[:varfile], nodes[:vardefaults] then 5
-      else nil
-      end
-    }
     legend.add(*edges)
     legend[:bgcolor] = Styler.hsl(15, 3, 100)
     legend[:label] = "Legend"

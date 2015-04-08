@@ -25,14 +25,14 @@ class GNode
     @node = "n#@@node_counter"
     @@node_counter += 1
 
-    @inc = Set[]
-    @out = Set[]
+    @inc = []
+    @out = []
   end
 
   def initialize_copy(src)
     super
-    @inc = Set[]
-    @out = Set[]
+    @inc = []
+    @out = []
   end
 
   def label; self[:label]; end
@@ -129,8 +129,8 @@ class Graph
   attr_accessor :rank_fn
 
   def initialize(nodes = [], edges = [], attrs = {})
-    @nodes = Set[*nodes]
-    @edges = Set[]
+    @nodes = nodes.dup
+    @edges = []
     add(*edges)
     @attrs = attrs
     @subgraphs = []
@@ -141,7 +141,7 @@ class Graph
 
   def initialize_copy(src)
     @nodes = @nodes.map {|i| i.dup }.to_set
-    @edges = Set[]
+    @edges = []
     src.edges.each {|i|
       add GEdge[get(i.snode.key), get(i.dnode.key), i.attrs.dup]
     }
@@ -174,36 +174,19 @@ class Graph
     n
   end
 
-  def match(*pats)
-    Set.new(@nodes).keep_if {|n|
-      pats.any? {|p| n.label =~ p }
-    }
-  end
-
-  def match_src(*pats)
-    Set.new(@edges).keep_if {|e|
-      pats.any? {|p| e.src =~ p }
-    }
-  end
-  def match_dst(*pats)
-    Set.new(@edges).keep_if {|e|
-      pats.any? {|p| e.dst =~ p }
-    }
-  end
-
   def add(*items)
     items.each {|i|
       case i
       when GNode
         # puts "N+++: #{i.inspect}"
-        @nodes.add i
+        @nodes.push i
       when GEdge
         # puts "E+++: #{i.inspect}"
-        @nodes.add i.snode
-        @nodes.add i.dnode
-        @edges.add i
-        i.snode.out.add i
-        i.dnode.inc.add i
+        @nodes.push i.snode
+        @nodes.push i.dnode
+        @edges.push i
+        i.snode.out.push i
+        i.dnode.inc.push i
         # puts "E---: #{i.inspect}"
       when Graph
         @subgraphs.unshift i
@@ -249,27 +232,27 @@ class Graph
 
   def focus(*nodes)
     # TODO: make new nodes + edges
-    keep_nodes = Set[]
-    keep_edges = Set[]
+    keep_nodes = []
+    keep_edges = []
     to_walk = Array.new(nodes)
     while !to_walk.empty?
       item = to_walk.pop
       keep_nodes << item
       keep_edges += item.inc
-      to_walk += item.inc_nodes - keep_nodes.to_a
+      to_walk += item.inc_nodes - keep_nodes
     end
     to_walk = Array.new(nodes)
     while !to_walk.empty?
       item = to_walk.pop
       keep_nodes << item
       keep_edges += item.out
-      to_walk += item.out_nodes - keep_nodes.to_a
+      to_walk += item.out_nodes - keep_nodes
     end
     Graph.new(keep_nodes, keep_edges, @attrs)
   end
 
   def rank_nodes
-    @nodes.classify {|n| @rank_fn.call(n) }
+    Set[*@nodes].classify {|n| @rank_fn.call(n) }
   end
 
   def inspect
