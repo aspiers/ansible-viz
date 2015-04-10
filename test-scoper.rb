@@ -61,9 +61,10 @@ class TC_Scoper < Test::Unit::TestCase
   end
 
   def test_find_var_uses
-    @s.find_var_uses(@d)
     taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
     task1 = @role1[:task].find {|t| t[:name] == 'task1' }
+    @s.find_var_uses(@d, taskA)
+    @s.find_var_uses(@d, task1)
     assert_not_nil taskA[:used_vars]
     assert_not_nil task1[:used_vars]
     assert_has_all %w(defA varAmain varAextra factB), taskA[:used_vars]

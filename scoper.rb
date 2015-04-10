@@ -19,31 +19,31 @@ class Scoper
   def process(dict)
     # Sweep up, collecting defined vars onto each role;
     # then sweep down checking all used vars are defined.
-    # This may need to be oriented around tasks not roles >.<
-
-    find_var_uses(dict)
 
     bottomup = order_tasks(dict[:role])
     topdown = bottomup.reverse
-#    puts order.map {|r| r[:name] }.join(" ")
+
     topdown.each {|task|
-      propagate_args(dict, task)
+      # Copy :args down to every task this one includes
+      task[:included_tasks].each {|t| t[:args] += task[:args] }
     }
     bottomup.each {|task|
+      find_var_uses(dict, task)
+
       calc_scope(dict, task)
       task[:scope].each {|var|
         var[:used] = []
       }
     }
+    dict[:role].each {|role|
+      (role[:varfile] + role[:vardefaults]).each {|vf|
+        vf[:used_vars] = find_vars_in_varfile(vf, vf[:data]).uniq
+      }
+    }
     topdown.each {|task|
       check_used_vars_for_task(dict, task)
     }
-#    dict[:vars_by_name] = Hash[*(dict[:role].flat_map {|r|
-#      [:task, :varfile, :vardefaults].
-#        flat_map {|sym| r[sym] }.
-#        flat_map {|t| t[:var] }.
-#        map {|v| [v[:name], v] }
-#    })]
+
     dict[:vars_by_name] = Hash[*(dict[:role].flat_map {|r|
       [:task, :varfile, :vardefaults].
         flat_map {|sym| r[sym] }.
@@ -57,34 +57,20 @@ class Scoper
     }
   end
 
-  def find_var_uses(dict)
-    dict[:role].each {|role|
-      role[:task].each {|task|
-        task[:used_vars] = find_vars_in_task(task, task[:data]).uniq
+  def find_var_uses(dict, task)
+    task[:used_vars] = find_vars_in_task(task, task[:data]).uniq
 
-        # Exclude "vars" which are actually registered resultsets
-        registers = find_registers(task, task[:data])
-        task[:used_vars].reject! {|s| registers.include? s }
+    # Exclude "vars" which are actually registered resultsets
+    task[:registers] = find_registers(task, task[:data])
+    task[:registers] += task[:included_tasks].flat_map {|t| t[:registers] }
+    task[:used_vars].reject! {|s| task[:registers].include? s }
 
-        # TODO control this with a flag
-        task[:used_vars] = task[:used_vars].flat_map {|v|
-          v =~ /_default$/ and [] or [v]
-        }.uniq
+    # TODO control this with a flag
+    task[:used_vars] = task[:used_vars].flat_map {|v|
+      v =~ /_default$/ and [] or [v]
+    }.uniq
 
-        raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
-      }
-
-      (role[:varfile] + role[:vardefaults]).each {|vf|
-        vf[:used_vars] = find_vars_in_varfile(vf, vf[:data]).uniq
-      }
-    }
-  end
-
-  def propagate_args(dict, task)
-    # Copy :args down to every task this one includes
-    task[:included_tasks].each {|t|
-      t[:args] += task[:args]
-    }
+    raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
   end
 
   def walk(tree, &block)
@@ -214,9 +200,7 @@ class Scoper
 
   def order_tasks(roles)
     roles = order_list(roles) {|role| role[:role_deps] }
-    all_tasks = roles.flat_map {|role|
-      role[:task]
-    }
+    all_tasks = roles.flat_map {|role| role[:task] }
     order_list(all_tasks) {|task|
       incl_tasks = task[:included_tasks].dup
       # :used_by_main is a pretty awful hack to break a circular scope dependency
