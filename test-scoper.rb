@@ -6,48 +6,8 @@ require 'ostruct'
 
 require './loader'
 require './postprocessor'
+require './varfinder'
 require './scoper'
-
-
-class TC_FindVars < Test::Unit::TestCase
-  def try(expect, input)
-    role = thing({}, :role, "role")
-    task = thing(role, :task, "task1")
-    assert_equal expect, Scoper.new.find_vars_in_task(task, input)
-  end
-
-  def test_str
-    try %w(def), "abc {{def}} ghi"
-  end
-
-  def test_list
-    try %w(a b), ["{{a}}", "{{b}}"]
-  end
-
-  def test_hash
-    try %w(a b), {:a => "{{a}}", :b => "{{b}}"}
-  end
-
-  def test_nesting
-    try %w(a b c), {:a => ["{{a}}", "{{b}}"], :b => "{{c}}"}
-  end
-
-  def test_bar
-    try %w(a b), "{{a|up(b)}}"
-  end
-
-  def test_stdout
-    try [], "{{a.stdout}}"
-  end
-
-  def test_complex
-    try %w(a b), "{{a | up(b | default({}))}}"
-  end
-
-  def test_array
-    try %w(con), "{{ con['aaa-bbb']['ccc'] }}"
-  end
-end
 
 
 class TC_Scoper < Test::Unit::TestCase
@@ -57,19 +17,8 @@ class TC_Scoper < Test::Unit::TestCase
     @roleA = @d[:role].find {|r| r[:name] == "roleA" }
     Postprocessor.new.process(@d)
     Resolver.new.process(@d)
+    VarFinder.new.process(@d)
     @s = Scoper.new
-  end
-
-  def test_find_var_uses
-    taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
-    task1 = @role1[:task].find {|t| t[:name] == 'task1' }
-    @s.find_var_uses(@d, taskA)
-    @s.find_var_uses(@d, task1)
-    assert_not_nil taskA[:used_vars]
-    assert_not_nil task1[:used_vars]
-    assert_has_all %w(defA varAmain varAextra factB), taskA[:used_vars]
-    assert_has_all %w(def1 var1main var1extra fact2
-                      defA varAmain varAextra factB), task1[:used_vars]
   end
 
   def test_order_tasks

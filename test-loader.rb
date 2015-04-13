@@ -50,43 +50,13 @@ class TC_Loader < Test::Unit::TestCase
     assert_equal expect, role
   end
 
-  def test_varfile
+  def test_mk_child
     d = {}
     role = thing(d, :role, "role")
-    varfile = Loader.new.mk_varfile(role, "sample/roles/role1/vars", "main.yml")
+    varfile = Loader.new.load_thing(role, :varfile, "sample/roles/role1/vars", "main.yml")
 
     varfile.delete :data
     expect = thing(thing({}, :role, "role"), :varfile, "main", {:parent => d})
     assert_equal expect, varfile
-  end
-
-  def test_vardefaults
-    role = thing({}, :role, "role")
-    vardefaults = Loader.new.mk_vardefaults(role, "sample/roles/role1/defaults", "main.yml")
-
-    vardefaults.delete :data
-    expect = thing(thing({}, :role, "role"), :vardefaults, "main")
-    assert_equal expect, vardefaults
-  end
-
-  def test_task
-    role = thing({}, :role, "role")
-    task = Loader.new.mk_task(role, "sample/roles/role1/tasks", "task1.yml")
-
-    task.delete(:data)
-    expect = thing(thing({}, :role, "role"), :task, "task1")
-    assert_equal expect, task
-  end
-
-  def test_playbook
-    d = {}
-    playbook = Loader.new.mk_playbook(d, "sample", "playbook1.yml")
-
-    playbook = d[:playbook][0]
-    assert_not_nil playbook
-
-    playbook.delete(:data)
-    expect = thing({}, :playbook, "playbook1")
-    assert_equal expect, playbook
   end
 end

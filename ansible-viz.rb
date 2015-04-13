@@ -13,6 +13,7 @@ require './graphviz'
 require './loader'
 require './postprocessor'
 require './resolver'
+require './varfinder'
 require './scoper'
 require './grapher'
 require './legend'
@@ -55,6 +56,7 @@ end
 def render(data, options)
   Postprocessor.new.process(data)
   Resolver.new.process(data)
+  VarFinder.new.process(data)
   Scoper.new.process(data)
   grapher = Grapher.new
   g = grapher.graph(data, options)

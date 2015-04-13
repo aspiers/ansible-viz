@@ -28,149 +28,45 @@ class Scoper
       task[:included_tasks].each {|t| t[:args] += task[:args] }
     }
     bottomup.each {|task|
-      find_var_uses(dict, task)
+      # Exclude "vars" which are actually registered resultsets
+      task[:registers] = find_registers(task, task[:data])
+      task[:registers] += task[:included_tasks].flat_map {|t| t[:registers] }
+      task[:used_vars].reject! {|s| task[:registers].include? s }
 
       calc_scope(dict, task)
       task[:scope].each {|var|
         var[:used] = []
       }
     }
-    dict[:role].each {|role|
-      (role[:varfile] + role[:vardefaults]).each {|vf|
-        vf[:used_vars] = find_vars_in_varfile(vf, vf[:data]).uniq
-      }
-    }
     topdown.each {|task|
       check_used_vars_for_task(dict, task)
     }
 
-    dict[:vars_by_name] = Hash[*(dict[:role].flat_map {|r|
+    pairs = dict[:role].flat_map {|role|
       [:task, :varfile, :vardefaults].
-        flat_map {|sym| r[sym] }.
+        flat_map {|sym| role[sym] }.
         flat_map {|t| t[:var] }.
         flat_map {|v| [v[:name], v] }
-    })]
+    }
+    # FIXME this works but shows vars are not always unified correctly.
+    # Might not be fixable for facts?
+#    counts = pairs.group_by {|k,v| k }.map {|k,v| [k, v.count] }
+#    counts.each {|k, v| puts "! #{v} vars with same name: #{k}" if v > 1 }
+    dict[:vars_by_name] = Hash[*pairs]
     dict[:role].each {|role|
-      (role[:varfile] + role[:vardefaults]).each {|vf|
-        check_used_vars_for_varfile(dict, vf)
-      }
+      [:varfile, :vardefaults, :template].
+        flat_map {|sym| role[sym] }.
+        each {|vf| check_used_vars(dict, vf) }
     }
   end
 
-  def find_var_uses(dict, task)
-    task[:used_vars] = find_vars_in_task(task, task[:data]).uniq
-
-    # Exclude "vars" which are actually registered resultsets
-    task[:registers] = find_registers(task, task[:data])
-    task[:registers] += task[:included_tasks].flat_map {|t| t[:registers] }
-    task[:used_vars].reject! {|s| task[:registers].include? s }
-
-    # TODO control this with a flag
-    task[:used_vars] = task[:used_vars].flat_map {|v|
-      v =~ /_default$/ and [] or [v]
-    }.uniq
-
-    raise_if_nil("#{task[:fqn]} used vars", task[:used_vars])
-  end
-
-  def walk(tree, &block)
-    case tree
-    when Hash
-      res = (yield(:hash, tree) or [])
-      res + tree.flat_map {|k,v| walk(v, &block) }.compact
-    when Enumerable
-      res = (yield(:list, tree) or [])
-      res + tree.flat_map {|i| walk(i, &block) }.compact
-    else
-      yield(:scalar, tree)
-    end
-  end
-
   def find_registers(task, data)
-    walk(data) {|type, obj|
+    VarFinder.walk(data) {|type, obj|
       case type
       when :hash
         [obj['register']]
       end
     }
-  end
-
-  def find_vars_in_task(task, data)
-    walk(data) {|type, obj|
-      case type
-      when :hash
-        find_vars_in_with_and_when(task, obj)
-      when :scalar
-        find_vars_in_string(obj)
-      end
-    }
-  end
-
-  def find_vars_in_varfile(varfile, data)
-    walk(data) {|type, obj|
-      case type
-      when :scalar
-        find_vars_in_string(obj)
-      end
-    }
-  end
-
-  def find_vars_in_string(data)
-    # This really needs a proper parser. For example, it can't handle nested {{ }}
-    # and it strips strings really badly.
-    # Maybe use the Python ast module? Oh wait we're in Ruby.
-    # rubypython gem didn't work for me, with Ruby 1.9.3 or 2.2.1.
-    rej = %w(join int item dirname basename regex_replace search
-             is defined failed skipped success True False update in
-             Vagrant)
-    data.to_s.scan(/\{\{\s*(.*?)\s*\}\}/).
-      map {|m| m[0] }.
-#      map {|s| if s =~ /virsh_vol_list_result/ then pp s end; s }.
-      map {|s|
-        # Turn all "f(x)" into "x", vars can't be function names
-        os = nil
-        while os != s
-          os = s
-          s = s.gsub(/\w+\((.*?)\)/, '\1')
-        end
-        s
-      }.
-      flat_map {|s| s.gsub(/".*?"/, "") }.
-      flat_map {|s| s.gsub(/'.*?'/, "") }.
-      flat_map {|s| s.gsub(/not /, "") }.
-      flat_map {|s| s.split("|") }.
-      flat_map {|s| s.split(" and ") }.
-      flat_map {|s| s.split(" or ") }.
-      flat_map {|s| s.split(" ") }.
-      reject {|s| s =~ /\w+\.stdout/ }.
-      map {|s| s.split(".")[0] }.
-      map {|s| s.split("[")[0] }.
-      map {|s| s.gsub(/[^[:alnum:]_-]/, '') }.
-      reject {|s| rej.include? s }.
-      reject {|s| s =~ /^\d*$/ }.
-      reject {|s| s =~ /^ansible_/ }.
-      reject {|s| s.empty? }
-  end
-
-  def find_vars_in_with_and_when(task, data)
-    items = data['with_items'] || []
-    items = if items.is_a?(String)
-      find_vars_in_string("{{ #{items} }}")
-    else
-      items.flat_map {|s| find_vars_in_string(s) }
-    end
-
-    with_dict = [data['with_dict']].flat_map {|s|
-      find_vars_in_string("{{ #{s} }}")
-    }
-#    if with_dict.length > 0 then pp with_dict end
-
-    _when = [data['when']].flat_map {|s|
-      find_vars_in_string("{{ #{s} }}")
-    }
-#    if _when.length > 0 then pp _when end
-
-    items + with_dict + _when
   end
 
   def order_list(list)
@@ -270,11 +166,11 @@ class Scoper
     }
   end
 
-  def check_used_vars_for_varfile(dict, vf)
-    vf[:used_vars].each {|use|
+  def check_used_vars(dict, thing)
+    thing[:used_vars].each {|use|
       # Figuring out the varfile scope is pretty awful since it could be included
       # from anywhere. Let's just mark vars used.
-      var = vf[:var].find {|v| v[:name] == use }
+      var = (thing[:var] || []).find {|v| v[:name] == use }
       if var == nil
         # Using a heuristic of "if you have two vars with the same name
         # then you're a damned fool".
@@ -285,10 +181,10 @@ class Scoper
         next
       end
       var[:used] ||= []
-      var[:used].push vf
-      vf[:uses] ||= Set[]
-      vf[:uses].add var
-#      puts "#{vf[:fqn]} -> #{var[:fqn]}"
+      var[:used].push thing
+      thing[:uses] ||= Set[]
+      thing[:uses].add var
+#      puts "#{thing[:fqn]} -> #{var[:fqn]}"
     }
   end
 end

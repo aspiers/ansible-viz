@@ -19,11 +19,12 @@ class Postprocessor
     role[:task].each {|task| process_task(dict, task) }
     role[:main_task] = role[:task].find {|task| task[:name] == 'main' }
 
-    role[:varfile] ||= []
-    role[:varfile].each {|varfile| process_vars(role, varfile) }
+    [:varfile, :vardefaults].each {|type|
+      role[type] ||= []
+      role[type].each {|varfile| process_vars(role, varfile) }
+    }
 
-    role[:vardefaults] ||= []
-    role[:vardefaults].each {|varfile| process_vars(role, varfile) }
+    role[:template] ||= []
   end
 
   def process_vars(dict, varfile)
@@ -37,12 +38,18 @@ class Postprocessor
     }
   end
 
+  def parse_args(s)
+    # "aa=11 bb=2{{ cc }}/{{ dd }}2" => "aa=11 bb=2x2" => {'aa' => "11", 'bb' => '2x2'}
+    s.gsub(/{{(.*?)}}/, "x").
+      split(" ").
+      map {|i| i.split("=") }.
+      reduce({}) {|acc, pair| acc.merge(Hash[*pair]) }
+  end
+
   def parse_include(s)
     elements = s.split(" ")
     taskname = elements.shift
-    args = elements.join(" ").gsub(/{{(.*?)}}/, "x").split(" ")
-    args = args.map {|i| i.split("=")[0] }
-    args = args.reject {|a| a == 'tags' }
+    args = parse_args(elements.join(" ")).keys.reject {|k| k == 'tags' }
     [taskname, args]
   end
 
@@ -76,8 +83,6 @@ class Postprocessor
       }
     }
 
-#    playbook[:include].uniq!
-#    playbook[:role].uniq!
     playbook[:task].uniq!
   end
 
@@ -109,5 +114,19 @@ class Postprocessor
     }.map {|n|
       thing(task, :var, n, {:defined => true})
     }
+
+    task[:used_templates] = data.flat_map {|subtask|
+      if subtask.include?("template")
+        line = subtask["template"]
+        args = case line
+               when Hash then line
+               when String then parse_args(line)
+               else raise "Bad type: #{line.class}"
+               end
+        [args["src"].sub(/(.*)\..*/, '\1')]
+      else []
+      end
+    }
+#    pp task[:used_templates] if task[:used_templates].length > 0
   end
 end

@@ -50,6 +50,10 @@ class Styler
       :var_fact      => {
         :style => 'filled',
         :fillcolor => hsl(33, 80, 100)},
+      :template => {
+        :shape => 'note',
+        :style => 'filled',
+        :fillcolor => hsl(44, 65, 90)},
 
       # Node decorations
       :var_unused    => {:style => 'filled',
@@ -61,6 +65,8 @@ class Styler
       # Edge styles
       :use_var => {:color => hsl(0, 0, 85),
                    :tooltip => 'uses var'},
+      :applies_template => {:color => hsl(44, 65, 90)},
+#                            :penwidth => 2, :style => 'dashed'},
       :call_task => {:color => 'blue', :penwidth => 2, :style => 'dashed'},
       :include => {:color => hsl(33, 100, 40), :penwidth => 2, :style => 'dashed'},
       :include_playbook => :include,

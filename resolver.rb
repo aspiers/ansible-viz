@@ -24,6 +24,7 @@ class Resolver
     dict[:task].each {|task|
       task[:included_by_tasks].uniq!
       resolve_args(dict, task)
+      resolve_templates(dict, task)
     }
   end
 
@@ -51,6 +52,13 @@ class Resolver
     end
     name = name.sub(/\.yml$/, '')
     find_on_role(dict, role, :task, name)
+  end
+  def find_template(dict, role, name)
+    if name =~ %r!../../([^/]+)/templates/([^/]+.yml)!
+      role = find_role(dict, $1)
+      name = $2
+    end
+    find_on_role(dict, role, :template, name)
   end
 
   def resolve_role_deps(dict, role)
@@ -103,5 +111,12 @@ class Resolver
     task[:args] = task[:args].uniq.map {|arg|
       thing(task, :var, arg, {:defined => true})
     }
+  end
+
+  def resolve_templates(dict, task)
+    task[:used_templates].map! {|file|
+      find_template(dict, task[:parent], file)
+    }
+#    pp (task[:used_templates].map {|tm| tm[:fqn] }) if task[:used_templates].length > 0
   end
 end

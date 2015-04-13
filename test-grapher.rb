@@ -39,6 +39,7 @@ class TC_Grapher < Test::Unit::TestCase
     varfile = thing(role, :varfile, "sss")
     var = thing(varfile, :var, "vvv")
     role[:vardefaults] = []
+    role[:template] = []
     playbook = thing(d, :playbook, "ppp", {:role => [role], :task => [task]})
 
     styler = Styler.new

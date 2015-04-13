@@ -39,7 +39,7 @@ class Loader
 
     def ls_yml(path, default=nil)
       ls(path, default).
-        find_all { |file| /.yml$/i === file.downcase }
+        find_all { |file| /\.yml$/i === file.downcase }
     end
 
     def yaml_slurp(*steps)
@@ -59,7 +59,7 @@ class Loader
       map {|file| mk_role(dict, rolesdir, file) }
 
     Loader.ls_yml(playbook_dir).
-      map {|file| mk_playbook(dict, playbook_dir, file) }
+      map {|file| load_thing(dict, :playbook, playbook_dir, file) }
 
     dict
   end
@@ -76,43 +76,28 @@ class Loader
       role[:role_deps] = []
     end
 
-    vardir = File.join(path, name, "vars")
-    Loader.ls_yml(vardir, []).
-      map {|f| mk_varfile(role, vardir, f) }
+    {:varfile => "vars",
+     :vardefaults => "defaults",
+     :task => "tasks",
+    }.each_pair {|type, dirname|
+      dir = File.join(path, name, dirname)
+      Loader.ls_yml(dir, []).map {|f|
+        load_thing(role, type, dir, f) }
+    }
 
-    vardefdir = File.join(path, name, "defaults")
-    Loader.ls_yml(vardefdir, []).
-      map {|f| mk_vardefaults(role, vardefdir, f) }
-
-    taskdir = File.join(path, name, "tasks")
-    Loader.ls_yml(taskdir, []).
-      map {|f| mk_task(role, taskdir, f) }
+    dir = File.join(path, name, "templates")
+    Loader.ls(dir, []).map {|f|
+      name = File.basename(f, '.*')
+      data = File.readlines(File.join(dir, f))
+      thing(role, :template, name, {:data => data})
+    }
 
     role
   end
 
-  def mk_varfile(role, path, file)
-    name = file.sub(/.yml$/, '')
+  def load_thing(parent, type, path, file)
+    name = File.basename(file, '.*')
     data = Loader.yaml_slurp(path, file) || {}
-    thing(role, :varfile, name, {:data => data})
-  end
-
-  def mk_vardefaults(role, path, file)
-    name = file.sub(/.yml$/, '')
-    data = Loader.yaml_slurp(path, file) || {}
-    thing(role, :vardefaults, name, {:data => data})
-  end
-
-  def mk_task(role, path, file)
-    name = file.sub(/.yml$/, '')
-    data = Loader.yaml_slurp(path, file) || []
-    thing(role, :task, name, {:data => data})
-  end
-
-  def mk_playbook(dict, path, file)
-    name = file.sub(/.yml$/, '')
-    playbook = thing(dict, :playbook, name)
-    playbook[:data] = Loader.yaml_slurp(path, file)
-    playbook
+    thing(parent, type, name, {:data => data})
   end
 end

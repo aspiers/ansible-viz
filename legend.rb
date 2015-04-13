@@ -10,7 +10,7 @@ require 'pp'
 class Legend
   def mk_legend
     styler = Styler.new
-    types = [:playbook, :role, :task, :varfile, :vardefaults, :var]
+    types = [:playbook, :role, :task, :varfile, :vardefaults, :var, :template]
     nodes = Hash[*(types.flat_map {|type|
       node = styler.style(GNode[type.to_s.capitalize], type)
       [type, node]
@@ -35,6 +35,7 @@ class Legend
       GEdge[nodes[:role], nodes[:main_var], {:label => "main vars define"}],
       GEdge[nodes[:role], nodes[:main_default], {:label => "main defaults define"}],
       GEdge[nodes[:role], nodes[:vardefaults], {:label => "provides"}],
+      GEdge[nodes[:role], nodes[:template], {:label => "provides"}],
       GEdge[nodes[:vardefaults], nodes[:default_var], {:label => "define"}],
       GEdge[nodes[:varfile], nodes[:var], {:label => "defines"}],
       GEdge[nodes[:varfile], nodes[:unused], {:label => "defines"}],
@@ -43,6 +44,8 @@ class Legend
       GEdge[nodes[:task], nodes[:fact], {:label => "defines"}],
       GEdge[nodes[:task], nodes[:vardefaults], {:label => "include_vars"}],
       GEdge[nodes[:task], nodes[:default_var], {:label => "uses"}],
+      GEdge[nodes[:task], nodes[:template], {:label => "applies"}],
+      GEdge[nodes[:template], nodes[:var], {:label => "uses"}],
     ].flat_map {|e|
       n = GNode[e[:label]]
       n[:shape] = 'none'

@@ -3,8 +3,8 @@
 require 'test/unit'
 require './ansible-viz'
 
-ROLE_KEYS = :role_deps, :task, :main_task, :varfile, :vardefaults
-TASK_KEYS = :data, :parent, :included_tasks, :included_varfiles, :var, :args, :included_by_tasks
+ROLE_KEYS = :role_deps, :task, :main_task, :varfile, :vardefaults, :template
+TASK_KEYS = :data, :parent, :included_tasks, :included_varfiles, :var, :args, :included_by_tasks, :used_templates
 
 class TC_PostprocessorA < Test::Unit::TestCase
   def setup

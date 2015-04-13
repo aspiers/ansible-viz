@@ -25,8 +25,6 @@ class Grapher
 
     styler.decorate(g, dict, options)
 
-#    hide_dullness(g, dict)
-
     if not options.show_vars
       to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
       g.cut(*to_cut)
@@ -57,6 +55,9 @@ class Grapher
       (role[:varfile] + role[:vardefaults]).each {|vf|
         add_node(g, vf)
         vars += vf[:var]
+      }
+      role[:template].each {|tm|
+        add_node(g, tm)
       }
     }
     vars.each {|v|
@@ -116,10 +117,14 @@ class Grapher
       }
 
       (role[:vardefaults] || []).each {|vf|
-        add_edge(g, role, vf, "defines default var")
+        add_edge(g, role, vf, "defines defaults")
         vf[:var].each {|v|
-          add_edge(g, vf, v, "defines var")
+          add_edge(g, vf, v, "defines default var")
         }
+      }
+
+      (role[:template] || []).each {|tm|
+        add_edge(g, role, tm, "provides template")
       }
     }
   end
@@ -138,38 +143,23 @@ class Grapher
       style = if privet then :private else :includes_task end
       styler.style(add_edge(g, task, incl_task, "includes task"), style)
     }
+
+    task[:used_templates].each {|tm|
+      styler.style(add_edge(g, task, tm, "applies template"), :applies_template)
+    }
   end
 
   def connect_usage(g, dict, styler)
     dict[:role].each {|role|
-      (role[:task] + role[:varfile] + role[:vardefaults]).each {|thing|
-        (thing[:uses] || []).each {|var|
-          edge = add_edge(g, thing, var, "uses var")
-          styler.style(edge, :use_var)
+      [:task, :varfile, :vardefaults, :template].
+        flat_map {|sym| role[sym] }.
+        each {|thing|
+          (thing[:uses] || []).each {|var|
+            edge = add_edge(g, thing, var, "uses var")
+            styler.style(edge, :use_var)
+          }
         }
-      }
     }
-  end
-
-  def hide_dullness(g, dict)
-    # Given a>main>c, produce a>c
-    g.nodes.find_all {|n|
-      n.data[:name] == 'main'
-    }.each {|n|
-      inc_node = n.inc_nodes[0]
-      edges = n.out.dup
-      g.cut n
-      edges.each {|e| e.snode = inc_node }
-      g.add(*edges)
-    }
-
-    # Elide var usage from things which define the var
-    # Maybe do this in the model?
-#    g.nodes.find_all {|n|
-#      n.data[:type] == :var
-#    }.each {|n|
-#      n.inc
-#    }
   end
 
   # This helps prevent unlinked nodes distorting the graph when it's all messed up.
