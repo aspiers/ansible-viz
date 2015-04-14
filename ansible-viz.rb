@@ -2,6 +2,8 @@
 # vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
+require 'bundler/setup'
+
 require 'mustache'
 require 'yaml'
 require 'fileutils'
