@@ -5,9 +5,11 @@ GraphViz depiction of Ansible dependencies.
 
 Run::
 
+<pre>
   gem install bundler
   bundle install
   ruby ansible-viz.rb <path-to-playbook-dir>
+</pre>
 
 Now browse viz.html or with-vars.html. The diagram is drawn client-side with
 viz.js (https://github.com/mdaines/viz.js/).
