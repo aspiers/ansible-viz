@@ -88,7 +88,10 @@ class Loader
     dir = File.join(path, name, "templates")
     Loader.ls(dir, []).map {|f|
       name = File.basename(f, '.*')
-      data = File.readlines(File.join(dir, f))
+      dirent = File.join(dir, f)
+      # FIXME: handle templates in subdirectories of templates/
+      next unless File.file? dirent
+      data = File.readlines(dirent)
       thing(role, :template, name, {:data => data})
     }
 
