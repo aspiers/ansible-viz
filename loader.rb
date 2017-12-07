@@ -70,7 +70,7 @@ class Loader
     # Get the names of roles which support this one with EG vars
     begin
       meta = Loader.yaml_slurp(path, name, "meta", "main.yml")
-      role[:role_deps] = (meta['dependencies'] || []).
+      role[:role_deps] = ((meta && meta['dependencies']) || []).
         map {|dep| dep.is_a?(Hash) and dep['role'] or dep }
     rescue Errno::ENOENT
       role[:role_deps] = []
