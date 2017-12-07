@@ -1,4 +1,9 @@
 source 'https://rubygems.org'
 
 gem 'mustache', '0.99.4'
-gem 'simplecov', :require => false, :group => :test
+group :test do
+  gem 'simplecov', :require => false
+  gem 'minitest'
+  gem 'test-unit-minitest'
+end
+
