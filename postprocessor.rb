@@ -71,6 +71,7 @@ class Postprocessor
       }
 
       playbook[:task] += (data['tasks'] || []).map {|task_h|
+        next nil unless task_h['include']
         path, args = parse_include(task_h['include'])
         if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
           raise "Bad include from playbook #{playbook[:name]}: #{path}"
@@ -80,7 +81,7 @@ class Postprocessor
         task = role[:task].find {|t| t[:name] == taskname }
         task[:args] += args
         task
-      }
+      }.compact
     }
 
     playbook[:task].uniq!
