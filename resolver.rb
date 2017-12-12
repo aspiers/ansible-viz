@@ -98,13 +98,18 @@ class Resolver
   def resolve_task_include_vars(dict, task)
     task[:included_varfiles].map! {|name|
       begin
-        if name =~ %r!^([^/]+).yml! or name =~ %r!^\.\./vars/([^/]+).yml!
+        if name =~ %r!\{\{.+\}\}!
+          thing(task, :varfile,
+                "dynamic include_vars in " + task[:fqn],
+                task[:path],
+                {:include => name, :var => []})
+        elsif name =~ %r!^([^/]+).yml! or name =~ %r!^\.\./vars/([^/]+).yml!
           find_on_role(dict, task[:parent], :varfile, $1)
         elsif name =~ %r!^\.\./defaults/([^/]+).yml!
           find_on_role(dict, task[:parent], :vardefaults, $1)
         elsif name =~ %r!^\.\./\.\./([^/]+)/vars/([^/]+).yml!
           find_on_role(dict, $1, :varfile, $2)
-        elsif name =~ %r!^\.\./\.\./([^/]+)/defaults/([^/]+).yml!
+        elsif name =~ %r!^(?:\.\./\.\./|roles/)([^/]+)/defaults/([^/]+).yml!
           find_on_role(dict, $1, :vardefaults, $2)
         else
           raise "Unhandled include_vars: #{name}"

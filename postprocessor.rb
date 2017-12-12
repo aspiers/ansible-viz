@@ -99,7 +99,7 @@ class Postprocessor
 
     task[:included_varfiles] = data.find_all {|i|
       i.is_a? Hash and i['include_vars']
-    }.map {|i| i['include_vars'].split(" ")[0] }
+    }.map {|i| i['include_vars'] }
 
     # A fact is created by set_fact in a task. A fact defines a var for every
     # task which includes this task. Facts defined by the main task of a role
