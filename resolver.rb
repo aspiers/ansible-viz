@@ -46,11 +46,11 @@ class Resolver
       raise "Failed to find #{type}: #{role[:name]}::#{name}"
   end
   def find_task(dict, role, name)
-    if name =~ %r!\.\./\.\./([^/]+)/tasks/([^/]+.yml)!
+    name = name.sub(/\.yml$/, '')
+    if name =~ %r!\.\./\.\./([^/]+)/tasks/([^/]+)!
       role = find_role(dict, $1)
       name = $2
     end
-    name = name.sub(/\.yml$/, '')
     find_on_role(dict, role, :task, name)
   end
   def find_template(dict, role, name)
