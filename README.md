@@ -1,6 +1,3 @@
-*** dead project ***
-
-
 ansible-viz
 ===========
 
