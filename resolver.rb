@@ -54,7 +54,7 @@ class Resolver
     find_on_role(dict, role, :task, name)
   end
   def find_template(dict, role, name)
-    if name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/templates/([^/]+.yml)$!
+    if name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/templates/(.+)$!
       role = find_role(dict, $1)
       name = $2
     end
