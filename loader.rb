@@ -42,8 +42,7 @@ class Loader
         find_all { |file| /\.yml$/i === file.downcase }
     end
 
-    def yaml_slurp(*steps)
-      filepath = File.join(*steps)
+    def yaml_slurp(filepath)
       File.open(filepath) {|fd|
         return YAML.load(fd)
       }
@@ -70,7 +69,8 @@ class Loader
 
     # Get the names of roles which support this one with EG vars
     begin
-      meta = Loader.yaml_slurp(role_path, "meta", "main.yml")
+      meta_main_yml = File.join(role_path, "meta", "main.yml")
+      meta = Loader.yaml_slurp(meta_main_yml)
       role[:role_deps] = ((meta && meta['dependencies']) || []).
         map {|dep| dep.is_a?(Hash) and dep['role'] or dep }
     rescue Errno::ENOENT
@@ -99,9 +99,10 @@ class Loader
     role
   end
 
-  def load_thing(parent, type, path, file)
+  def load_thing(parent, type, dir, file)
     name = File.basename(file, '.*')
-    data = Loader.yaml_slurp(path, file) || {}
+    path = File.join(dir, file)
+    data = Loader.yaml_slurp(path) || {}
     thing(parent, type, name, {:data => data})
   end
 end
