@@ -77,6 +77,7 @@ class Scoper
     while todo.length > 0
       item = todo.shift
       deps = yield(item)
+      deps.reject! {|i| i.is_a?(String) && i =~ /dynamic dependency/ }
       if deps.all? {|dep| dep[:loaded] }
         item[:loaded] = true
         order.push item

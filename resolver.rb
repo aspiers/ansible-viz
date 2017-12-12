@@ -63,6 +63,14 @@ class Resolver
 
   def resolve_role_deps(dict, role)
     role[:role_deps] = role[:role_deps].map {|depname|
+      if depname =~ /\{\{.*\}\}/
+        $stderr.puts "WARNING: skipping dynamic dependency of #{role[:name]} " +
+                     "role on:\n" +
+                     depname + "\n" +
+                     "since expressions are not supported yet."
+        next "dynamic dependency of #{role[:name]}"
+      end
+
       begin
         find_role(dict, depname)
       rescue
