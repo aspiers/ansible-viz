@@ -20,6 +20,12 @@ require './scoper'
 require './grapher'
 require './legend'
 
+# FIXME: evil evil global, get rid of this!
+$debug_level = 1
+
+def debug(level, msg)
+  $stderr.puts msg if $debug_level >= level
+end
 
 def get_options()
   options = OpenStruct.new
@@ -76,6 +82,10 @@ def get_options()
          "Don't connect vars to where they're used.") do |val|
       options.show_usage = false
     end
+    o.on("-v[LEVEL]", "--verbose=[LEVEL]",
+         "Show debugging") do |level|
+      $debug_level = level ? level.to_i : 2
+    end
     o.on_tail("-h", "--help", "Show this message") do
       puts o
       exit
@@ -91,10 +101,15 @@ def get_options()
 end
 
 def render(data, options)
+  debug 1, "Postprocessing ..."
   Postprocessor.new(options).process(data)
+  debug 1, "Resolving ..."
   Resolver.new.process(data)
+  debug 1, "Finding variables ..."
   VarFinder.new.process(data)
+  debug 1, "Scoping variables ..."
   Scoper.new.process(data)
+  debug 1, "Graphing ..."
   grapher = Grapher.new
   g = grapher.graph(data, options)
   g[:rankdir] = 'LR'

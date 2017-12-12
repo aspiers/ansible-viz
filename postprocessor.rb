@@ -76,6 +76,8 @@ class Postprocessor
   end
 
   def process_playbook(dict, playbook)
+    debug 3, "process_playbook(#{playbook[:fqn]})"
+    debug 5, playbook.pretty_inspect.gsub(/^/, '   ')
     playbook[:include] = []
     playbook[:role] = []
     playbook[:task] = []
@@ -98,13 +100,16 @@ class Postprocessor
 
       playbook[:task] += (data['tasks'] || []).map {|task_hash|
         next nil unless task_hash['include']
+        debug 5, "   adding task #{task_hash}"
         path, args = parse_include(task_hash['include'])
         if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
           raise "Bad include from playbook #{playbook[:name]}: #{path}"
         end
         rolename, taskname = $1, $2
         role = dict[:role].find {|r| r[:name] == rolename }
+        debug 4, "   found task's role #{role[:fqn]}"
         task = role[:task].find {|t| t[:name] == taskname }
+        debug 4, "   found task #{taskname}"
         task[:args] += args
         task
       }.compact
@@ -154,6 +159,8 @@ class Postprocessor
       else []
       end
     }
-#    pp task[:used_templates] if task[:used_templates].length > 0
+    if task[:used_templates].length > 0
+      debug 6, task[:used_templates].pretty_inspect
+    end
   end
 end

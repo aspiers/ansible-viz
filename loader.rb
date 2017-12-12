@@ -10,6 +10,8 @@ require 'pp'
 
 
 def thing(parent, type, name, path, extra = {})
+  human_path = path.sub /^#{ENV['HOME']}/, '~'
+  debug 2, "Loading new #{type} #{name} from #{human_path}, parent #{parent[:name]}"
   it = {:type => type, :name => name, :fqn => name, :path => path}.merge(extra)
   if parent[:type] != nil
     it.merge!({:parent => parent,
@@ -81,6 +83,7 @@ class Loader
      :vardefaults => "defaults",
      :task => "tasks",
     }.each_pair {|type, dirname|
+      debug 3, "   loading #{type} for role '#{name}'"
       dir = File.join(role_path, dirname)
       Loader.ls_yml(dir, []).map {|f|
         load_thing(role, type, dir, f) }

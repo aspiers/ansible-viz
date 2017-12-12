@@ -58,7 +58,7 @@ class Resolver
               "non-existent role '#{role}'"
       end
     end
-
+    debug 4, "      find #{type} in role #{role[:name]} with name #{name}"
     role[type].find {|t| t[:name] == name }
   end
 
@@ -72,9 +72,11 @@ class Resolver
   # unresolvable, but task returned may be nil, to allow the caller to
   # report the context in which the task failed to resolve.
   def find_task(dict, role, name)
+    debug 4, "   find_task(#{role[:name]}, #{name})"
     task_name = name.sub(/\.yml$/, '')
     if task_name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/tasks/([^/]+)$!
       role_name, task_name = $1, $2
+      debug 4, "      finding role #{role_name} elsewhere in #{task_name}"
       role = find_role_by_name(dict, role_name)
       unless role
         $stderr.puts "WARNING: Couldn't find containing role '#{role_name}' " \
@@ -88,7 +90,9 @@ class Resolver
   end
 
   def find_template(dict, role, name)
+    debug 4, "   find_template(#{role[:name]}, #{name})"
     if name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/templates/(.+)$!
+      debug 4, "      finding template #$2 elsewhere in #$1"
       role = find_role_by_name(dict, $1)
       name = $2
     end
@@ -100,10 +104,10 @@ class Resolver
   def resolve_role_deps(dict, role)
     role[:role_deps] = role[:role_deps].map {|depname|
       if depname =~ /\{\{.*\}\}/
-        $stderr.puts "WARNING: skipping dynamic dependency of #{role[:name]} " +
-                     "role on:\n" +
-                     depname + "\n" +
-                     "since expressions are not supported yet."
+        debug 4, "WARNING: skipping dynamic dependency of #{role[:name]} " +
+              "role on:\n" +
+              depname + "\n" +
+              "since expressions are not supported yet."
         next "dynamic dependency of #{role[:name]}"
       end
 
@@ -124,6 +128,7 @@ class Resolver
   # keys: name, type, fqn, data, parent, args, ...
   def resolve_task_includes(dict, task)
     task[:included_tasks].map! {|name, args|
+      debug 4, "finding task #{name} included in #{task[:fqn]}"
       incl_task, incl_task_name, role = find_task(dict, task[:parent], name)
       if incl_task.nil?
         $stderr.puts "WARNING: Couldn't find task '#{name}' "\
@@ -163,7 +168,7 @@ class Resolver
           raise "Unhandled include_vars: #{name}"
         end
       rescue Exception
-        puts "Problem resolving task '#{task[:fqn]}' include_vars: '#{name}'"
+        debug 0, "Problem resolving task '#{task[:fqn]}' include_vars: '#{name}'"
         raise
       end
     }
@@ -180,6 +185,7 @@ class Resolver
 
   def resolve_templates(dict, task)
     task[:used_templates].map! {|file|
+      debug 4, "finding template #{file} used in #{task[:fqn]}"
       if file =~ %r!\{\{.*\}\}!
         thing(task[:parent], :template,
               "dynamic template src in " + task[:fqn],
@@ -189,6 +195,9 @@ class Resolver
         find_template(dict, task[:parent], file)
       end
     }
-#    pp (task[:used_templates].map {|tm| tm[:fqn] }) if task[:used_templates].length > 0
+    if task[:used_templates].length > 0
+      templates = task[:used_templates].map {|tm| tm[:fqn] }
+      debug 4, "   used_templates: " + templates.join(" ")
+    end
   end
 end
