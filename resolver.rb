@@ -46,7 +46,7 @@ class Resolver
       raise "Failed to find #{type}: #{role[:name]}::#{name}"
   end
   def find_task(dict, role, name)
-    if name =~ %r!../../([^/]+)/tasks/([^/]+.yml)!
+    if name =~ %r!\.\./\.\./([^/]+)/tasks/([^/]+.yml)!
       role = find_role(dict, $1)
       name = $2
     end
@@ -54,7 +54,7 @@ class Resolver
     find_on_role(dict, role, :task, name)
   end
   def find_template(dict, role, name)
-    if name =~ %r!../../([^/]+)/templates/([^/]+.yml)!
+    if name =~ %r!\.\./\.\./([^/]+)/templates/([^/]+.yml)!
       role = find_role(dict, $1)
       name = $2
     end
@@ -94,13 +94,13 @@ class Resolver
   def resolve_task_include_vars(dict, task)
     task[:included_varfiles].map! {|name|
       begin
-        if name =~ %r!^([^/]+).yml! or name =~ %r!^../vars/([^/]+).yml!
+        if name =~ %r!^([^/]+).yml! or name =~ %r!^\.\./vars/([^/]+).yml!
           find_on_role(dict, task[:parent], :varfile, $1)
-        elsif name =~ %r!^../defaults/([^/]+).yml!
+        elsif name =~ %r!^\.\./defaults/([^/]+).yml!
           find_on_role(dict, task[:parent], :vardefaults, $1)
-        elsif name =~ %r!^../../([^/]+)/vars/([^/]+).yml!
+        elsif name =~ %r!^\.\./\.\./([^/]+)/vars/([^/]+).yml!
           find_on_role(dict, $1, :varfile, $2)
-        elsif name =~ %r!^../../([^/]+)/defaults/([^/]+).yml!
+        elsif name =~ %r!^\.\./\.\./([^/]+)/defaults/([^/]+).yml!
           find_on_role(dict, $1, :vardefaults, $2)
         else
           raise "Unhandled include_vars: #{name}"
