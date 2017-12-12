@@ -61,6 +61,8 @@ class Resolver
     find_on_role(dict, role, :template, name)
   end
 
+  # dict[:role] is Array of role Hashes
+  # keys: name, type, ...
   def resolve_role_deps(dict, role)
     role[:role_deps] = role[:role_deps].map {|depname|
       if depname =~ /\{\{.*\}\}/
@@ -79,6 +81,8 @@ class Resolver
     }
   end
 
+  # dict[:task] is Array of task Hashes; task is same Hash
+  # keys: name, type, fqn, data, parent, args, ...
   def resolve_task_includes(dict, task)
     task[:included_tasks].map! {|name, args|
       incl_task = find_task(dict, task[:parent], name)
