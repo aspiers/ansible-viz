@@ -117,7 +117,7 @@ class Resolver
 
   def resolve_args(dict, task)
     task[:args] = task[:args].uniq.map {|arg|
-      thing(task, :var, arg, {:defined => true})
+      thing(task, :var, arg, task[:path], {:defined => true})
     }
   end
 

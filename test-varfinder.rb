@@ -11,8 +11,8 @@ require './scoper'
 
 class TC_FindVars < Test::Unit::TestCase
   def try(expect, input)
-    role = thing({}, :role, "role")
-    task = thing(role, :task, "task1")
+    role = thing({}, :role, "role", "rolepath")
+    task = thing(role, :task, "task1", "taskpath")
     assert_equal expect, VarFinder.new.find_vars_in_task(task, input)
   end
 

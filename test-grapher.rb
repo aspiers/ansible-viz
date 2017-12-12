@@ -24,8 +24,8 @@ class TC_Grapher < Test::Unit::TestCase
 
   def test_add_node
     d = {}
-    role = thing(d, :role, "role")
-    var = thing(role, :var, "var")
+    role = thing(d, :role, "role", "rolepath")
+    var = thing(role, :var, "var", "varpath")
     Grapher.new.add_node(@g, var)
     assert_equal 1, @g.nodes.length
     @g.nodes.each {|n| assert_equal "role::var", n[:label] }
@@ -33,14 +33,15 @@ class TC_Grapher < Test::Unit::TestCase
 
   def test_add_nodes
     d = {}
-    role = thing(d, :role, "rrr")
-    task = thing(role, :task, "ttt")
-    thing(task, :var, "fff")  # fact
-    varfile = thing(role, :varfile, "sss")
-    var = thing(varfile, :var, "vvv")
+    role = thing(d, :role, "rrr", "rolepath")
+    task = thing(role, :task, "ttt", "taskpath")
+    thing(task, :var, "fff", "fff/varpath")  # fact
+    varfile = thing(role, :varfile, "sss", "sss/varpath")
+    var = thing(varfile, :var, "vvv", "vvv/varpath")
     role[:vardefaults] = []
     role[:template] = []
-    playbook = thing(d, :playbook, "ppp", {:role => [role], :task => [task]})
+    playbook = thing(d, :playbook, "ppp", "playbookpath",
+                     {:role => [role], :task => [task]})
 
     styler = Styler.new
     Grapher.new.add_nodes(@g, d, styler, true)

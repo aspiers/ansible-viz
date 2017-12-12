@@ -158,7 +158,7 @@ class Scoper
     task[:used_vars].each {|use|
       var = scope_by_name[use]
       if var == nil
-        var = thing(task, :var, use, {:defined => false})
+        var = thing(task, :var, use, task[:path], {:defined => false})
       end
       var[:used] ||= []
       var[:used].push task

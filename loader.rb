@@ -9,8 +9,8 @@ require 'ostruct'
 require 'pp'
 
 
-def thing(parent, type, name, extra = {})
-  it = {:type => type, :name => name, :fqn => name}.merge(extra)
+def thing(parent, type, name, path, extra = {})
+  it = {:type => type, :name => name, :fqn => name, :path => path}.merge(extra)
   if parent[:type] != nil
     it.merge!({:parent => parent,
                :fqn => "#{parent[:fqn]}::#{name}"})
@@ -65,7 +65,7 @@ class Loader
 
   def mk_role(dict, roles_path, name)
     role_path = File.join(roles_path, name)
-    role = thing(dict, :role, name)
+    role = thing(dict, :role, name, role_path)
 
     # Get the names of roles which support this one with EG vars
     begin
@@ -93,7 +93,7 @@ class Loader
       # FIXME: handle templates in subdirectories of templates/
       next unless File.file? dirent
       data = File.readlines(dirent)
-      thing(role, :template, name, {:data => data})
+      thing(role, :template, name, dirent, {:data => data})
     }
 
     role
@@ -103,6 +103,6 @@ class Loader
     name = File.basename(file, '.*')
     path = File.join(dir, file)
     data = Loader.yaml_slurp(path) || {}
-    thing(parent, type, name, {:data => data})
+    thing(parent, type, name, path, {:data => data})
   end
 end

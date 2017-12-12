@@ -33,7 +33,7 @@ class Postprocessor
       if key =~ /(_default|_updates)$/
         []
       else
-        [thing(varfile, :var, key, {:defined => true, :data => value})]
+        [thing(varfile, :var, key, varfile[:path], {:defined => true, :data => value})]
       end
     }
   end
@@ -113,7 +113,7 @@ class Postprocessor
         [i.split("=")[0]]
       end
     }.map {|n|
-      thing(task, :var, n, {:defined => true})
+      thing(task, :var, n, task[:path], {:defined => true})
     }
 
     task[:used_templates] = data.flat_map {|subtask|

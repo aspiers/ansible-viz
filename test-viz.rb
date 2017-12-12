@@ -14,7 +14,7 @@ def assert_has_all(e, a, m="")
 end
 
 def assert_keys(it, *keys)
-  base = [:type, :name, :fqn]
+  base = [:type, :name, :fqn, :path]
   assert_has_all base + keys, it.keys
 end
 
