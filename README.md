@@ -22,4 +22,6 @@ data. Run
 to execute tests and generate a coverage report. The tests create a
 graph of the sample data in `test.html`.
 
-Example: http://imgur.com/gallery/UC5Sv5f
+## Example
+
+![](example.png)
