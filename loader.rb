@@ -64,12 +64,13 @@ class Loader
     dict
   end
 
-  def mk_role(dict, path, name)
+  def mk_role(dict, roles_path, name)
+    role_path = File.join(roles_path, name)
     role = thing(dict, :role, name)
 
     # Get the names of roles which support this one with EG vars
     begin
-      meta = Loader.yaml_slurp(path, name, "meta", "main.yml")
+      meta = Loader.yaml_slurp(role_path, "meta", "main.yml")
       role[:role_deps] = ((meta && meta['dependencies']) || []).
         map {|dep| dep.is_a?(Hash) and dep['role'] or dep }
     rescue Errno::ENOENT
@@ -80,12 +81,12 @@ class Loader
      :vardefaults => "defaults",
      :task => "tasks",
     }.each_pair {|type, dirname|
-      dir = File.join(path, name, dirname)
+      dir = File.join(role_path, dirname)
       Loader.ls_yml(dir, []).map {|f|
         load_thing(role, type, dir, f) }
     }
 
-    dir = File.join(path, name, "templates")
+    dir = File.join(role_path, "templates")
     Loader.ls(dir, []).map {|f|
       name = File.basename(f, '.*')
       dirent = File.join(dir, f)
