@@ -110,11 +110,11 @@ class Scoper
     }
   end
 
-  def raise_if_nil(name, it)
+  def raise_if_nil(context, name, it)
     if it == nil
-      raise "#{name} is nil"
+      raise "in #{context}, #{name} is nil"
     elsif it.include? nil
-      raise "#{name} includes nil"
+      raise "in #{context}, #{name} includes nil: #{it.class}"
     end
   end
 
@@ -123,10 +123,10 @@ class Scoper
     role = task[:parent]
     if role[:scope] == nil
       main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
-      raise_if_nil("main_vf", main_vf)
+      raise_if_nil(task[:fqn], "main_vf", main_vf)
 
       defaults = role[:vardefaults].flat_map {|vf| vf[:var] }
-      raise_if_nil("defaults", defaults)
+      raise_if_nil(task[:fqn], "defaults", defaults)
 
       # role[:scope] should really only be set after the main task has been handled.
       # main can include other tasks though, so to break the circular dependency, allow
@@ -143,7 +143,7 @@ class Scoper
       :role_scope => role[:scope],
       :facts => task[:var]
     }
-    task[:debug].each {|k,v| raise_if_nil(k, v) }
+    task[:debug].each {|k,v| raise_if_nil(task[:fqn], k, v) }
     task[:scope] = task[:debug].values.inject {|a,i| a + i }
     if task == role[:main_task]
       # update the role[:scope] so it has the full picture
