@@ -29,6 +29,8 @@ class Scoper
       # Copy :args down to every task this one includes
       task[:included_tasks].each {|t| t[:args] += task[:args] }
     }
+
+    debug 2, "Calculating scope for each task, bottom up"
     bottomup.each {|task|
       # Exclude "vars" which are actually registered resultsets
       task[:registers] = find_registers(task, task[:data])
@@ -40,10 +42,14 @@ class Scoper
         var[:used] = []
       }
     }
+
+    debug 2, "Checking used vars for each task, top down"
     topdown.each {|task|
       check_used_vars_for_task(dict, task)
     }
 
+    # Construct a mapping of variable names to variables for all variables
+    # in all tasks/varfiles/vardefaults of every role
     pairs = dict[:role].flat_map {|role|
       [:task, :varfile, :vardefaults].
         flat_map {|sym| role[sym] }.
@@ -154,25 +160,38 @@ class Scoper
     end
   end
 
+  # Calculate scope of task, i.e. which variables are available to the task.
+  # This method must be called in bottom-up dependency order.
   def calc_scope(dict, task)
-    # This method must be called in bottom-up dependency order.
     role = task[:parent]
+    debug 3, "calc_scope(#{task[:fqn]}), parent #{role[:fqn]}"
     if role[:scope].nil?
+      debug 4, "   no scope for #{role[:fqn]} yet"
       main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
       raise_if_nil(task[:fqn], "main_vf", main_vf)
 
       defaults = role[:vardefaults].flat_map {|vf| vf[:var] }
       raise_if_nil(task[:fqn], "defaults", defaults)
 
-      # role[:scope] should really only be set after the main task has been handled.
-      # main can include other tasks though, so to break the circular dependency, allow
-      # a partial role[:scope] of just the vars, defaults and dependent roles' scopes.
+      # role[:scope] should really only be set after the main task has
+      # been handled.  main can include other tasks though, so to
+      # break the circular dependency, allow a partial role[:scope] of
+      # just the vars, defaults and dependent roles' scopes.
       dep_vars = role[:role_deps].flat_map {|dep|
+        debug 5, "Checking dependency '#{dep[:fqn]}' of " +
+                 "role '#{role[:fqn]}'"
+
         if ! dep.has_key? :scope
-          raise "dependency #{dep[:fqn]} of role #{role[:fqn]} is missing scope"
+          debug 1, "WARNING: dependency '#{dep[:fqn]}' of " +
+                   "role '#{role[:fqn]}' is missing scope; " +
+                   "guessing that it didn't have any tasks."
+          nil
+        else
+          debug 4, "   dependency '#{dep[:fqn]}' of role '#{role[:fqn]}' " +
+                   "has scope '#{dep[:scope].map {|i| i[:fqn]}}'"
+          dep[:scope]
         end
-        dep[:scope]
-      }
+      }.compact
       raise_if_nil(task[:fqn], "dependency scope", dep_vars)
       role[:scope] = main_vf[:var] + defaults + dep_vars
     end
@@ -182,7 +201,7 @@ class Scoper
       :incl_varfiles => task[:included_varfiles].flat_map {|vf| vf[:var] },
       :args => task[:args],
       :incl_scopes => task[:included_tasks].flat_map {|t|
-        raise "task #{t[:fqn]} missing scope" unless t[:scope]
+        raise "task '#{t[:fqn]}' missing scope" unless t[:scope]
         t[:scope]
       },
       :role_scope => role[:scope],
@@ -193,6 +212,7 @@ class Scoper
     if task == role[:main_task]
       # update the role[:scope] so it has the full picture
       role[:scope] = task[:scope]
+      debug 4, "   set full scope for role '#{role[:fqn]}' from task '#{task[:fqn]}'"
     end
   end
 
