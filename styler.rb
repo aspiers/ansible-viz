@@ -99,12 +99,15 @@ class Styler
 
       case type
       when :var
-        if data[:used] and data[:used].length == 0
+        if data[:used].nil?
+          $stderr.puts "WARNING: var #{node.data[:fqn]} missing :used"
+        end
+        if ! data[:used] || data[:used].length == 0
           style(node, :var_unused)
-          node[:tooltip] += '. UNUSED.'
+          node[:tooltip] += '- UNUSED'
         elsif not data[:defined]
           style(node, :var_undefined)
-          node[:tooltip] += '. UNDEFINED.'
+          node[:tooltip] += '- UNDEFINED'
         elsif data[:parent][:type] == :vardefaults
           style(node, :var_default)
         elsif data[:parent][:type] == :task
