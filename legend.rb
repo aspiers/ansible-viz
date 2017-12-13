@@ -30,7 +30,7 @@ class Legend
       styler.style(GEdge[nodes[:playbook], nodes[:task], {:label => "calls task"}],
           :call_task),
       styler.style(GEdge[nodes[:role], nodes[:role], {:label => "includes"}], :includes_role),
-      GEdge[nodes[:task], nodes[:role], {:label => "is part of"}],
+      GEdge[nodes[:role], nodes[:task], {:label => "calls"}],
       GEdge[nodes[:role], nodes[:varfile], {:label => "provides"}],
       GEdge[nodes[:role], nodes[:main_var], {:label => "main vars define"}],
       GEdge[nodes[:role], nodes[:main_default], {:label => "main defaults define"}],

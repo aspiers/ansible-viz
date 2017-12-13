@@ -130,7 +130,7 @@ class Grapher
   end
 
   def connect_task(g, dict, task, styler)
-    add_edge(g, task, task[:parent], "is part of")
+    add_edge(g, task[:parent], task, "calls")
 
     task[:var].each {|var|
       if var[:defined]
