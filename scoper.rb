@@ -134,8 +134,14 @@ class Scoper
       # role[:scope] should really only be set after the main task has been handled.
       # main can include other tasks though, so to break the circular dependency, allow
       # a partial role[:scope] of just the vars, defaults and dependent roles' scopes.
-      role[:scope] = main_vf[:var] + defaults +
-                     role[:role_deps].flat_map {|d| d[:scope] }
+      dep_vars = role[:role_deps].flat_map {|dep|
+        if ! dep.has_key? :scope
+          raise "dependency #{dep[:fqn]} of role #{role[:fqn]} is missing scope"
+        end
+        dep[:scope]
+      }
+      raise_if_nil(task[:fqn], "dependency scope", dep_vars)
+      role[:scope] = main_vf[:var] + defaults + dep_vars
     end
 
     # This list must be in ascending precedence order
