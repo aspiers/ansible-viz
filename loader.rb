@@ -87,16 +87,26 @@ class Loader
     }
 
     dir = File.join(role_path, "templates")
-    Loader.ls(dir, []).map {|f|
-      name = File.basename(f, '.*')
-      dirent = File.join(dir, f)
-      # FIXME: handle templates in subdirectories of templates/
-      next unless File.file? dirent
-      data = File.readlines(dirent)
-      thing(role, :template, name, dirent, {:data => data})
-    }
+    mk_templates(dict, role, dir)
 
     role
+  end
+
+  def mk_templates(dict, role, template_dir, subdir=nil)
+    path = subdir ? File.join(template_dir, subdir) : template_dir
+    Loader.ls(path, []).map {|f|
+      name = File.basename(f, '.*')
+      dirent = File.join(path, f)
+      if File.directory? dirent
+        mk_templates(dict, role, template_dir,
+                     subdir ? File.join(subdir, dirent) : f)
+      end
+      next unless File.file? dirent
+      data = File.readlines(dirent)
+      thing(role, :template,
+            subdir ? File.join(subdir, name) : name,
+            dirent, {:data => data})
+    }
   end
 
   def load_thing(parent, type, dir, file)
