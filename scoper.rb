@@ -95,10 +95,13 @@ class Scoper
     order
   end
 
-  def order_tasks(roles)
+  def all_tasks(roles)
     roles = order_list(roles) {|role| role[:role_deps] }
-    all_tasks = roles.flat_map {|role| role[:task] }
-    order_list(all_tasks) {|task|
+    roles.flat_map {|role| role[:task] }
+  end
+
+  def order_tasks(roles)
+    order_list(all_tasks(roles)) {|task|
       incl_tasks = task[:included_tasks].dup
       # :used_by_main is a pretty awful hack to break a circular scope dependency
       if task == task[:main_task]
