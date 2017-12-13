@@ -1,4 +1,0 @@
----
-- name: part1 | Role 1 task2 part1
-  set_fact:
-    fact2: "omg"

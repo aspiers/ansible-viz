@@ -1,8 +1,0 @@
----
-- include_vars: extra.yml
-
-- name: partA | Role A taskA partA
-  set_fact:
-    factAunused: "{{ defA | factB |
-      update(varAmain | default({})) |
-      update(varAextra | default({})) }}"
