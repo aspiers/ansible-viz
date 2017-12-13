@@ -132,7 +132,14 @@ class Resolver
 
   def resolve_templates(dict, task)
     task[:used_templates].map! {|file|
-      find_template(dict, task[:parent], file)
+      if file =~ %r!\{\{.*\}\}!
+        thing(task[:parent], :template,
+              "dynamic template src in " + task[:fqn],
+              task[:path],
+              {:src => file, :data => {}})
+      else
+        find_template(dict, task[:parent], file)
+      end
     }
 #    pp (task[:used_templates].map {|tm| tm[:fqn] }) if task[:used_templates].length > 0
   end
