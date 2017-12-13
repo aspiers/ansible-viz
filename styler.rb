@@ -94,7 +94,8 @@ class Styler
                  when :varfile then "Vars"
                  else type.to_s.capitalize
                  end
-      node[:tooltip] = "#{typename} #{data[:fqn]}&#10;from #{data[:path]}"
+      path = data[:path].sub %r!^#{Regexp.quote(options.playbook_dir)}/!, ""
+      node[:tooltip] = "#{typename} #{data[:fqn]}&#10;from #{path}"
 
       case type
       when :var
