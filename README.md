@@ -25,3 +25,10 @@ graph of the sample data in `test.html`.
 ## Example
 
 ![](example.png)
+
+## History
+
+This tool was [originally written](https://github.com/lxsli/ansible-viz)
+by [Alexis Lee](https://github.com/lxsli/ansible-viz), who kindly
+[agreed to transfer maintainership over](https://github.com/lxsli/ansible-viz/issues/3)
+so that the project could be revived.
