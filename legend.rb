@@ -36,7 +36,7 @@ class Legend
       GEdge[nodes[:role], nodes[:main_default], {:label => "main defaults define"}],
       GEdge[nodes[:role], nodes[:vardefaults], {:label => "provides"}],
       GEdge[nodes[:role], nodes[:template], {:label => "provides"}],
-      GEdge[nodes[:vardefaults], nodes[:default_var], {:label => "define"}],
+      GEdge[nodes[:vardefaults], nodes[:default_var], {:label => "defines"}],
       GEdge[nodes[:varfile], nodes[:var], {:label => "defines"}],
       GEdge[nodes[:varfile], nodes[:unused], {:label => "defines"}],
       styler.style(GEdge[nodes[:task], nodes[:task], {:label => "includes"}], :includes_task),
