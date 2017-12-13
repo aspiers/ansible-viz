@@ -25,12 +25,19 @@ class Grapher
 
     styler.decorate(g, dict, options)
 
-    if not options.show_vars
-      to_cut = g.nodes.find_all {|n| n.data[:type] == :var }
-      g.cut(*to_cut)
-    end
+    cut(g, options)
 
     g
+  end
+
+  def cut(g, options)
+    %w(var varfile vardefaults template task).each do |type|
+      option = "show_%ss" % type.gsub(/s$/, '')
+      if not options.send option
+        to_cut = g.nodes.find_all {|n| n.data[:type] == type.to_sym }
+        g.cut(*to_cut)
+      end
+    end
   end
 
   def rank_node(node)

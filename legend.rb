@@ -8,7 +8,7 @@ require 'pp'
 
 
 class Legend
-  def mk_legend
+  def mk_legend(options)
     styler = Styler.new
     types = [:playbook, :role, :task, :varfile, :vardefaults, :var, :template]
     nodes = Hash[*(types.flat_map {|type|
@@ -23,6 +23,12 @@ class Legend
     nodes[:unused] = styler.style(GNode["Unused var"], :var_unused)
     nodes[:undefined] = styler.style(GNode["Undefined var"], :var_undefined)
     nodes[:fact] = styler.style(GNode["Fact / Argument"], :var_fact)
+
+    %w(task vardefaults varfile var template).each do |type|
+      option = "show_%ss" % type.gsub(/s$/, '')
+      nodes.delete type.to_sym if ! options.send option
+    end
+
     edges = [
       GEdge[nodes[:playbook], nodes[:role], {:label => "calls"}],
       styler.style(GEdge[nodes[:playbook], nodes[:playbook], {:label => "include"}],
@@ -46,7 +52,11 @@ class Legend
       GEdge[nodes[:task], nodes[:default_var], {:label => "uses"}],
       GEdge[nodes[:task], nodes[:template], {:label => "applies"}],
       GEdge[nodes[:template], nodes[:var], {:label => "uses"}],
-    ].flat_map {|e|
+    ]
+
+    edges.reject! {|e| e.snode.nil? || e.dnode.nil? }
+
+    edges.flat_map {|e|
       n = GNode[e[:label]]
       n[:shape] = 'none'
 

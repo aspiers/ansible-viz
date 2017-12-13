@@ -25,7 +25,12 @@ def get_options()
   options = OpenStruct.new
   options.format = :hot
   options.output_filename = "viz.html"
+  options.show_tasks = true
+  options.show_varfiles = true
+  options.show_templates = true
   options.show_vars = false
+  options.show_vardefaults = true
+  options.show_varfiles = true
   options.show_usage = true
 
   OptionParser.new do |o|
@@ -33,9 +38,29 @@ def get_options()
     o.on("-o", "--output [FILE]", "Where to write output") do |fname|
       options.output_filename = fname
     end
-    o.on("--vars",
+    o.on("--[no-]tasks",
+         "Include tasks.") do |val|
+      options.show_tasks = val
+    end
+    o.on("--[no-]templates",
+         "Include templates.") do |val|
+      options.show_templates = val
+    end
+    o.on("--[no-]vardefaults",
+         "Include variable defaults.") do |val|
+      options.show_vardefaults = val
+    end
+    o.on("--[no-]main-defaults",
+         "Include main defaults.") do |val|
+      options.show_main_defaults = val
+    end
+    o.on("--[no-]varfiles",
+         "Include variable files.") do |val|
+      options.show_varfiles = val
+    end
+    o.on("--[no-]vars",
          "Include vars. Unused/undefined detection still has minor bugs.") do |val|
-      options.show_vars = true
+      options.show_vars = val
     end
     o.on("--no-usage",
          "Don't connect vars to where they're used.") do |val|
@@ -66,7 +91,7 @@ def render(data, options)
   g.is_cluster = true
 
 #  unlinked = grapher.extract_unlinked(g)
-  legend = Legend.new.mk_legend
+  legend = Legend.new.mk_legend(options)
 
   superg = Graph.new
 #  superg.add g, unlinked, legend
