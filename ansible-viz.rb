@@ -62,6 +62,16 @@ def get_options()
          "Include vars. Unused/undefined detection still has minor bugs.") do |val|
       options.show_vars = val
     end
+    o.on("-eREGEXP", "--exclude-nodes=REGEXP",
+         "Regexp of nodes to exclude from the graph, " \
+         "e.g. 'role:myrole[1-3]|task:mytask[4-6]'") do |regex|
+      options.exclude_nodes = Regexp.new(regex)
+    end
+    o.on("-EREGEXP", "--exclude-edges=REGEXP",
+         "Regexp of edges to exclude from the graph, " \
+         "e.g. 'role:myrole[1-3] -> task:mytask[4-6]'") do |regex|
+      options.exclude_edges = Regexp.new(regex)
+    end
     o.on("--no-usage",
          "Don't connect vars to where they're used.") do |val|
       options.show_usage = false

@@ -38,6 +38,33 @@ class Grapher
         g.cut(*to_cut)
       end
     end
+
+    if options.exclude_nodes
+      exclude_nodes = g.nodes.find_all {|n|
+        descriptor = "%s:%s" % [n.data[:type], n.data[:fqn]]
+        exclude = descriptor =~ options.exclude_nodes
+        if exclude
+          puts "Excluding #{descriptor}"
+        end
+        exclude
+      }
+      g.cut(*exclude_nodes)
+    end
+
+    if options.exclude_edges
+      exclude_edges = g.edges.find_all {|e|
+        descriptor = "%s:%s -> %s:%s" % [
+          e.snode.data[:type], e.snode.data[:fqn],
+          e.dnode.data[:type], e.dnode.data[:fqn]
+        ]
+        exclude = descriptor =~ options.exclude_edges
+        if exclude
+          puts "Excluding #{descriptor}"
+        end
+        exclude
+      }
+      g.cut(*exclude_edges)
+    end
   end
 
   def rank_node(node)
