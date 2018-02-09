@@ -157,7 +157,10 @@ class Scoper
     task[:debug] = {
       :incl_varfiles => task[:included_varfiles].flat_map {|vf| vf[:var] },
       :args => task[:args],
-      :incl_scopes => task[:included_tasks].flat_map {|t| t[:scope] },
+      :incl_scopes => task[:included_tasks].flat_map {|t|
+        raise "task #{t[:fqn]} missing scope" unless t[:scope]
+        t[:scope]
+      },
       :role_scope => role[:scope],
       :facts => task[:var]
     }
