@@ -75,9 +75,9 @@ class Postprocessor
         dict[:role].find {|r| r[:name] == role }
       }
 
-      playbook[:task] += (data['tasks'] || []).map {|task_h|
-        next nil unless task_h['include']
-        path, args = parse_include(task_h['include'])
+      playbook[:task] += (data['tasks'] || []).map {|task_hash|
+        next nil unless task_hash['include']
+        path, args = parse_include(task_hash['include'])
         if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
           raise "Bad include from playbook #{playbook[:name]}: #{path}"
         end
