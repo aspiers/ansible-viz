@@ -120,14 +120,17 @@ class Grapher
   def connect_playbooks(g, dict, styler)
     dict[:playbook].each {|playbook|
       (playbook[:include] || []).each {|pb|
-        edge = add_edge(g, playbook, pb, "includes")
+        edge = add_edge(g, playbook, pb,
+                        "#{playbook[:fqn]} includes playbook #{pb[:fqn]}")
         styler.style(edge, :include_playbook)
       }
       (playbook[:role] || []).each {|role|
-        add_edge(g, playbook, role, "includes")
+        add_edge(g, playbook, role,
+                 "#{playbook[:fqn]} invokes role #{role[:name]}")
       }
       (playbook[:task] || []).each {|task|
-        edge = add_edge(g, playbook, task, "calls task")
+        edge = add_edge(g, playbook, task,
+                        "#{playbook[:fqn]} calls task #{task[:fqn]}")
         styler.style(edge, :call_task)
       }
     }
@@ -136,7 +139,7 @@ class Grapher
   def connect_roles(g, dict, styler)
     dict[:role].each {|role|
       (role[:role_deps] || []).each {|dep|
-        edge = add_edge(g, role, dep, "includes role")
+        edge = add_edge(g, role, dep, "#{role[:fqn]} includes role #{dep[:fqn]}")
         styler.style(edge, :includes_role)
       }
 
@@ -145,42 +148,46 @@ class Grapher
       }
 
       (role[:varfile] || []).each {|vf|
-        add_edge(g, role, vf, "defines var")
+        add_edge(g, role, vf, "#{role[:fqn]} uses varfile #{vf[:fqn]}")
         vf[:var].each {|v|
-          add_edge(g, vf, v, "defines var")
+          add_edge(g, vf, v, "#{vf[:fqn]} defines var #{v[:fqn]}")
         }
       }
 
       (role[:vardefaults] || []).each {|vf|
-        add_edge(g, role, vf, "defines defaults")
+        add_edge(g, role, vf, "#{role[:fqn]} uses default varfile #{vf[:fqn]}")
         vf[:var].each {|v|
-          add_edge(g, vf, v, "defines default var")
+          add_edge(g, vf, v, "#{vf[:fqn]} defines var #{v[:fqn]}")
         }
       }
 
       (role[:template] || []).each {|tm|
-        add_edge(g, role, tm, "provides template")
+        add_edge(g, role, tm, "#{role[:fqn]} provides template #{tm[:fqn]}")
       }
     }
   end
 
   def connect_task(g, dict, task, styler)
-    add_edge(g, task[:parent], task, "calls")
+    add_edge(g, task[:parent], task,
+             "#{task[:parent][:fqn]} calls #{task[:fqn]}")
 
     task[:var].each {|var|
       if var[:defined]
-        add_edge(g, task, var, "sets fact")
+        add_edge(g, task, var, "#{task[:fqn]} sets fact #{var[:fqn]}")
       end
     }
 
     task[:included_tasks].each {|incl_task|
       privet = (task[:parent] != incl_task[:parent] and incl_task[:name][0] == '_')
       style = if privet then :private else :includes_task end
-      styler.style(add_edge(g, task, incl_task, "includes task"), style)
+      styler.style(add_edge(g, task, incl_task,
+                            "#{task[:fqn]} includes task #{incl_task[:fqn]}"), style)
     }
 
     task[:used_templates].each {|tm|
-      styler.style(add_edge(g, task, tm, "applies template"), :applies_template)
+      styler.style(add_edge(g, task, tm,
+                            "#{task[:fqn]} applies template #{tm[:fqn]}"),
+                   :applies_template)
     }
   end
 
@@ -190,7 +197,8 @@ class Grapher
         flat_map {|sym| role[sym] }.
         each {|thing|
           (thing[:uses] || []).each {|var|
-            edge = add_edge(g, thing, var, "uses var")
+            edge = add_edge(g, thing, var,
+                            "#{thing[:fqn]} uses var #{var[:fqn]}")
             styler.style(edge, :use_var)
           }
         }
