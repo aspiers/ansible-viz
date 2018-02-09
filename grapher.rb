@@ -106,9 +106,9 @@ class Grapher
   end
 
   def add_edge(g, src, dst, tooltip, extra={})
-    if src[:node] == nil
+    if src[:node].nil?
       raise "Bad src: #{src[:name]}"
-    elsif dst[:node] == nil
+    elsif dst[:node].nil?
       raise "Bad dst: #{dst[:name]}"
     end
     edge = GEdge[src[:node], dst[:node], {:tooltip => tooltip}.merge(extra)]

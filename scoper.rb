@@ -114,7 +114,7 @@ class Scoper
   end
 
   def raise_if_nil(context, name, it)
-    if it == nil
+    if it.nil?
       raise "in #{context}, #{name} is nil"
     elsif it.include? nil
       raise "in #{context}, #{name} includes nil: #{it.class}"
@@ -124,7 +124,7 @@ class Scoper
   def calc_scope(dict, task)
     # This method must be called in bottom-up dependency order.
     role = task[:parent]
-    if role[:scope] == nil
+    if role[:scope].nil?
       main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
       raise_if_nil(task[:fqn], "main_vf", main_vf)
 
@@ -166,7 +166,7 @@ class Scoper
     scope_by_name = Hash[*(task[:scope].flat_map {|v| [v[:name], v] })]
     task[:used_vars].each {|use|
       var = scope_by_name[use]
-      if var == nil
+      if var.nil?
         var = thing(task, :var, use, task[:path], {:defined => false})
       end
       var[:used] ||= []
@@ -181,12 +181,12 @@ class Scoper
       # Figuring out the varfile scope is pretty awful since it could be included
       # from anywhere. Let's just mark vars used.
       var = (thing[:var] || []).find {|v| v[:name] == use }
-      if var == nil
+      if var.nil?
         # Using a heuristic of "if you have two vars with the same name
         # then you're a damned fool".
         var = dict[:vars_by_name][use]
       end
-      if var == nil
+      if var.nil?
 #        puts "Can't find var anywhere: #{use}"
         next
       end

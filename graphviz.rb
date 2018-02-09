@@ -98,7 +98,7 @@ class Graph
         src = g.get(k)
         run_list.each_with_index { |i,ix|
           dst = g.get(i)
-          if dst == nil
+          if dst.nil?
             dst = GNode[i]
             g.add dst
           end
@@ -167,7 +167,7 @@ class Graph
   end
   def get_or_make(k)
     n = get(k)
-    if n == nil
+    if n.nil?
       n = GNode[k]
       add n
     end

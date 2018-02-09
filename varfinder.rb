@@ -50,7 +50,7 @@ class VarFinder
   end
 
   def raise_if_nil(name, it)
-    if it == nil
+    if it.nil?
       raise "#{name} is nil"
     elsif it.include? nil
       raise "#{name} includes nil"

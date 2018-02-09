@@ -95,7 +95,7 @@ class Resolver
   def resolve_task_includes(dict, task)
     task[:included_tasks].map! {|name, args|
       incl_task = find_task(dict, task[:parent], name)
-      if incl_task == nil
+      if incl_task.nil?
         raise "Task #{task[:fqn]} failed to find included task: #{name}.yml"
       end
       incl_task[:args] += args

@@ -29,7 +29,7 @@ class Loader
   class <<self
     def ls(path, default=nil)
       if !File.directory? path
-        if default == nil
+        if default.nil?
           raise "No such directory: " + path
         end
         return default
