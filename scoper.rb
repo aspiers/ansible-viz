@@ -126,7 +126,7 @@ class Scoper
     if it.nil?
       raise "in #{context}, #{name} is nil"
     elsif it.include? nil
-      raise "in #{context}, #{name} includes nil: #{it.class}"
+      raise "in #{context}, #{name} #{it.class} includes nil"
     end
   end
 
