@@ -85,12 +85,16 @@ class Postprocessor
         playbook[:include].push data['include']
       end
 
-      playbook[:role] += (data['roles'] || []).map {|role|
-        if role.instance_of? Hash
-          role = role['role']
+      playbook[:role] += (data['roles'] || []).map {|role_or_name|
+        role_name = role_or_name.instance_of?(Hash) ?
+                      role_or_name['role'] : role_or_name
+        role = dict[:role].find {|r| r[:name] == role_name }
+        unless role
+          $stderr.puts "WARNING: Couldn't find role '#{role_name}' "\
+                       "(invoked by playbook '#{playbook[:name]}')"
         end
-        dict[:role].find {|r| r[:name] == role }
-      }
+        role
+      }.compact
 
       playbook[:task] += (data['tasks'] || []).map {|task_hash|
         next nil unless task_hash['include']
