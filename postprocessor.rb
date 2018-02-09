@@ -52,8 +52,23 @@ class Postprocessor
       reduce({}) {|acc, pair| acc.merge(Hash[*pair]) }
   end
 
+  # Parse an include directive of the form:
+  #
+  #   foo.yml param1=bar1 param2=bar2 tags=qux
+  #
+  # discarding any "tags" parameter, and return:
+  #
+  #   ["foo.yml", { "param1" => "bar1", "param2" => "bar2" }]
   def parse_include(s)
     s.gsub! /\{\{\s*playbook_dir\s*\}\}\//, ''
+    if s =~ /\{\{.*\}\}/
+        $stderr.puts "WARNING: not parsing dynamic include of #{role[:name]} " +
+                     "role on:\n" +
+                     depname + "\n" +
+                     "since expressions are not supported yet."
+        return [s, {}]
+    end
+
     elements = s.split(" ")
     taskname = elements.shift
     args = parse_args(elements.join(" ")).keys.reject {|k| k == 'tags' }
