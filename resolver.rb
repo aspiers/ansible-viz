@@ -36,13 +36,13 @@ class Resolver
     }
   end
 
-  def find_role(dict, rolename)
+  def find_role_by_name(dict, rolename)
     dict[:role].find {|r| r[:name] == rolename } or
       raise "Failed to find role: #{rolename}"
   end
 
   def find_on_role(dict, role, type, name)
-    role = if !role.is_a?(Hash) then find_role(dict, role) else role end
+    role = if !role.is_a?(Hash) then find_role_by_name(dict, role) else role end
     role[type].find {|t| t[:name] == name } or
       raise "Failed to find #{type}: #{role[:name]}::#{name}"
   end
@@ -50,7 +50,7 @@ class Resolver
   def find_task(dict, role, name)
     name = name.sub(/\.yml$/, '')
     if name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/tasks/([^/]+)$!
-      role = find_role(dict, $1)
+      role = find_role_by_name(dict, $1)
       name = $2
     end
     find_on_role(dict, role, :task, name)
@@ -58,7 +58,7 @@ class Resolver
 
   def find_template(dict, role, name)
     if name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/templates/(.+)$!
-      role = find_role(dict, $1)
+      role = find_role_by_name(dict, $1)
       name = $2
     end
     find_on_role(dict, role, :template, name)
@@ -77,7 +77,7 @@ class Resolver
       end
 
       begin
-        find_role(dict, depname)
+        find_role_by_name(dict, depname)
       rescue
         raise "Problem resolving deps for role #{role[:fqn]}: #{depname or 'nil'}"
       end
