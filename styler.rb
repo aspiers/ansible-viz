@@ -99,7 +99,7 @@ class Styler
 
       case type
       when :var
-        if data[:used].length == 0
+        if data[:used] and data[:used].length == 0
           style(node, :var_unused)
           node[:tooltip] += '. UNUSED.'
         elsif not data[:defined]

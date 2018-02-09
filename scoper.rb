@@ -79,7 +79,10 @@ class Scoper
       item = todo.shift
       #puts "processing #{item[:fqn]}, todo list size #{todo.length}"
       deps = yield(item)
-      deps.reject! {|i| i.is_a?(String) && i =~ /dynamic dependency/ }
+      deps.reject! {|i|
+        (i.is_a?(String) && i =~ /dynamic dependency/) or
+        (i.is_a?(Hash) && i[:unresolved])
+      }
       if deps.all? {|dep|
            unless dep.is_a? Hash
              raise "weird dep of #{item[:fqn]}: #{dep.inspect}"
