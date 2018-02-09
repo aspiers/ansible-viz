@@ -69,6 +69,7 @@ class Scoper
     }
   end
 
+  # Do a topological sort of roles or tasks
   def order_list(list)
     # Dependency orders list
     todo = list.dup
