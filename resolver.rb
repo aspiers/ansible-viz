@@ -41,8 +41,14 @@ class Resolver
       raise "Failed to find role: #{rolename}"
   end
 
+  # Finds something of the given type and name within the given role.
+  # The role can be a Hash or the name of a role.
   def find_on_role(dict, role, type, name)
-    role = if !role.is_a?(Hash) then find_role_by_name(dict, role) else role end
+    if !role.is_a?(Hash)
+      # Role name supplied; find the corresponding role Hash.
+      role = find_role_by_name(dict, role)
+    end
+
     role[type].find {|t| t[:name] == name } or
       raise "Failed to find #{type}: #{role[:name]}::#{name}"
   end
