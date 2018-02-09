@@ -80,7 +80,12 @@ class Scoper
       #puts "processing #{item[:fqn]}, todo list size #{todo.length}"
       deps = yield(item)
       deps.reject! {|i| i.is_a?(String) && i =~ /dynamic dependency/ }
-      if deps.all? {|dep| dep[:loaded] }
+      if deps.all? {|dep|
+           unless dep.is_a? Hash
+             raise "weird dep of #{item[:fqn]}: #{dep.inspect}"
+           end
+           dep[:loaded]
+         }
         item[:loaded] = true
         #puts "  all loaded, pushing"
         order.push item
