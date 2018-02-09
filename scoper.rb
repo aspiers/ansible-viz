@@ -89,7 +89,7 @@ class Scoper
       safe += 1
       if safe > 500
         oops = todo.map {|it| it[:fqn] }.join(" ")
-        raise "oops: #{oops}"
+        raise "Oops, infinite recursion?\nTodo list was: #{oops}"
       end
     end
     order.each {|i| i.delete :loaded }
