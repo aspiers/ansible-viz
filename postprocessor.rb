@@ -42,8 +42,10 @@ class Postprocessor
     }
   end
 
+  # Parse an argument string like "aa=11 bb=2{{ cc }}/{{ dd }}2",
+  # replace interpolations with "x" to obtain "aa=11 bb=2x2", then
+  # convert to a Hash: {'aa' => "11", 'bb' => '2x2'}
   def parse_args(s)
-    # "aa=11 bb=2{{ cc }}/{{ dd }}2" => "aa=11 bb=2x2" => {'aa' => "11", 'bb' => '2x2'}
     s.gsub(/{{(.*?)}}/, "x").
       split(" ").
       map {|i| i.split("=") }.
