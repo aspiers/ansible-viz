@@ -77,13 +77,16 @@ class Scoper
     safe = 0
     while todo.length > 0
       item = todo.shift
+      #puts "processing #{item[:fqn]}, todo list size #{todo.length}"
       deps = yield(item)
       deps.reject! {|i| i.is_a?(String) && i =~ /dynamic dependency/ }
       if deps.all? {|dep| dep[:loaded] }
         item[:loaded] = true
+        #puts "  all loaded, pushing"
         order.push item
       else
-#        puts "Failed to process #{item[:fqn]}, deps: " + deps.map {|it| it[:name] }.join(" ")
+        #puts "  Deps of #{item[:fqn]} not all loaded: " + deps.map {|it| it[:name] }.join(" ")
+        #puts "  Pushing back on todo list"
         todo.push item
       end
       safe += 1
