@@ -1,15 +1,22 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    coderay (1.1.2)
     docile (1.1.5)
     json (2.1.0)
+    method_source (0.8.2)
     minitest (4.7.5)
     mustache (0.99.4)
+    pry (0.10.4)
+      coderay (~> 1.1.0)
+      method_source (~> 0.8.1)
+      slop (~> 3.4)
     simplecov (0.15.1)
       docile (~> 1.1.0)
       json (>= 1.8, < 3)
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.2)
+    slop (3.6.0)
     test-unit-minitest (0.9.1)
       minitest (~> 4.7)
 
@@ -19,6 +26,7 @@ PLATFORMS
 DEPENDENCIES
   minitest
   mustache (= 0.99.4)
+  pry
   simplecov
   test-unit-minitest
 
