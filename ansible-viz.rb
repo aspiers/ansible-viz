@@ -91,7 +91,7 @@ def get_options()
 end
 
 def render(data, options)
-  Postprocessor.new.process(data)
+  Postprocessor.new(options).process(data)
   Resolver.new.process(data)
   VarFinder.new.process(data)
   Scoper.new.process(data)

@@ -7,6 +7,10 @@ require 'pp'
 
 
 class Postprocessor
+  def initialize(options)
+    @options = options
+  end
+
   def process(dict)
     dict[:role].each {|role| process_role(dict, role) }
     dict[:task] = dict[:role].flat_map {|role| role[:task] }
@@ -47,6 +51,7 @@ class Postprocessor
   end
 
   def parse_include(s)
+    s.gsub! /\{\{\s*playbook_dir\s*\}\}\//, ''
     elements = s.split(" ")
     taskname = elements.shift
     args = parse_args(elements.join(" ")).keys.reject {|k| k == 'tags' }
