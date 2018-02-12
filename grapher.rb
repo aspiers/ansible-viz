@@ -44,7 +44,7 @@ class Grapher
         descriptor = "%s:%s" % [n.data[:type], n.data[:fqn]]
         exclude = descriptor =~ options.exclude_nodes
         if exclude
-          puts "Excluding #{descriptor}"
+          puts "Excluding node #{descriptor}"
         end
         exclude
       }
@@ -59,7 +59,7 @@ class Grapher
         ]
         exclude = descriptor =~ options.exclude_edges
         if exclude
-          puts "Excluding #{descriptor}"
+          puts "Excluding edge #{descriptor}"
         end
         exclude
       }
