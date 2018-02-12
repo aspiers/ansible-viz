@@ -19,6 +19,7 @@ GEM
     slop (3.6.0)
     test-unit-minitest (0.9.1)
       minitest (~> 4.7)
+    word_wrap (1.0.0)
 
 PLATFORMS
   ruby
@@ -29,6 +30,7 @@ DEPENDENCIES
   pry
   simplecov
   test-unit-minitest
+  word_wrap
 
 BUNDLED WITH
    1.10.6

@@ -100,8 +100,12 @@ def get_options()
   options
 end
 
+def tty_width
+  ENV['COLUMNS'] ? ENV['COLUMNS'].to_i : 78
+end
+
 def divider(section)
-  debug 2, "=" * (ENV['COLUMNS'] ? ENV['COLUMNS'].to_i : 78)
+  debug 2, "=" * tty_width
   debug 1, section + " ..."
   debug 2, ""
 end

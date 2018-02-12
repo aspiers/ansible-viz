@@ -4,6 +4,8 @@
 require 'rubygems'
 require 'ostruct'
 require 'pp'
+require 'word_wrap'
+require 'word_wrap/core_ext'
 
 
 class Scoper
@@ -69,15 +71,30 @@ class Scoper
     }
   end
 
-  # Do a topological sort of roles or tasks
-  def order_list(list)
-    # Dependency orders list
+  def wrap_indent(indent, list)
+    list.join(" ") \
+      .wrap(tty_width - indent.size) \
+      .gsub(/^/, indent)
+  end
+
+  # Take a list of roles or tasks, and return another list of the same
+  # items topologically sorted so that dependencies come before the
+  # items which depend on them.
+  #
+  # Requires a block to be passed which when called with a given role
+  # or task, will return an Array of its dependencies.
+  def order_list(type, list)
+    debug 3, "order_list() ordering #{type}s"
+    debug 4, "   [\n" +
+             wrap_indent(' ' * 6, list.map { |item| item[:fqn] }) +
+             "   ]"
     todo = list.dup
     order = []
     safe = 0
     while todo.length > 0
       item = todo.shift
-      #puts "processing #{item[:fqn]}, todo list size #{todo.length}"
+      debug 4, "   order_list() processing #{type} '#{item[:fqn]}', " \
+               "#{todo.length} still todo"
       deps = yield(item)
       deps.reject! {|i|
         (i.is_a?(String) && i =~ /dynamic dependency/) or
@@ -85,16 +102,18 @@ class Scoper
       }
       if deps.all? {|dep|
            unless dep.is_a? Hash
-             raise "weird dep of #{item[:fqn]}: #{dep.inspect}"
+             raise "weird dep of #{type} '#{item[:fqn]}': #{dep.inspect}"
            end
            dep[:loaded]
          }
         item[:loaded] = true
-        #puts "  all loaded, pushing"
+        debug 5, "      All #{deps.size} dependencies of #{type} '#{item[:fqn]}' loaded, "\
+                 "pushing onto order"
         order.push item
       else
-        #puts "  Deps of #{item[:fqn]} not all loaded: " + deps.map {|it| it[:name] }.join(" ")
-        #puts "  Pushing back on todo list"
+        debug 5, "      Deps of #{type} '#{item[:fqn]}' not all loaded:\n" +
+                 wrap_indent(' ' * 9, deps.map {|it| it[:name] })
+        debug 5, "      Pushing to back of todo list"
         todo.push item
       end
       safe += 1
@@ -104,16 +123,18 @@ class Scoper
       end
     end
     order.each {|i| i.delete :loaded }
+    debug 4, "Final order of #{type}s:\n" +
+             wrap_indent('   ', list.map { |item| item[:fqn] })
     order
   end
 
   def all_tasks(roles)
-    roles = order_list(roles) {|role| role[:role_deps] }
+    roles = order_list("role", roles) {|role| role[:role_deps] }
     roles.flat_map {|role| role[:task] }
   end
 
   def order_tasks(roles)
-    order_list(all_tasks(roles)) {|task|
+    order_list("task", all_tasks(roles)) {|task|
       incl_tasks = task[:included_tasks].dup
       # :used_by_main is a pretty awful hack to break a circular scope dependency
       if task == task[:main_task]
