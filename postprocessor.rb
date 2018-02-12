@@ -59,14 +59,16 @@ class Postprocessor
   # discarding any "tags" parameter, and return:
   #
   #   ["foo.yml", { "param1" => "bar1", "param2" => "bar2" }]
-  def parse_include(s)
+  def parse_include(s, type, origin)
     s.gsub! /\{\{\s*playbook_dir\s*\}\}\//, ''
     if s =~ /\{\{.*\}\}/
-        $stderr.puts "WARNING: not parsing dynamic include of #{role[:name]} " +
-                     "role on:\n" +
-                     depname + "\n" +
-                     "since expressions are not supported yet."
-        return [s, {}]
+      # FIXME: this unnecessarily skips includes like:
+      #
+      #   foo.yml var={{ value }}
+      $stderr.puts "WARNING: skipping dynamic include '#{s}' " +
+                   "from #{type} '#{origin}' " +
+                   "since expressions are not supported yet."
+      return [s, {}]
     end
 
     elements = s.split(" ")
@@ -101,7 +103,8 @@ class Postprocessor
       playbook[:task] += (data['tasks'] || []).map {|task_hash|
         next nil unless task_hash['include']
         debug 5, "   adding task #{task_hash}"
-        path, args = parse_include(task_hash['include'])
+        path, args = parse_include(task_hash['include'],
+                                   "playbook", playbook[:fqn])
         if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
           raise "Bad include from playbook #{playbook[:name]}: #{path}"
         end
@@ -126,7 +129,7 @@ class Postprocessor
 
     task[:included_tasks] = data.find_all {|i|
       i.is_a? Hash and i['include']
-    }.map {|i| parse_include(i['include']) }
+    }.map {|i| parse_include(i['include'], "task", task[:fqn]) }
 
     task[:included_varfiles] = data.find_all {|i|
       i.is_a? Hash and i['include_vars']
