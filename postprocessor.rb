@@ -61,10 +61,15 @@ class Postprocessor
   #   ["foo.yml", { "param1" => "bar1", "param2" => "bar2" }]
   def parse_include(s, type, origin)
     s.gsub! /\{\{\s*playbook_dir\s*\}\}\//, ''
-    if s =~ /\{\{.*\}\}/
-      # FIXME: this unnecessarily skips includes like:
-      #
-      #   foo.yml var={{ value }}
+
+    # We want to skip lines like:
+    #
+    #   - include: "{{ expression }}"
+    #
+    # but not lines like:
+    #
+    #   - include: foo.yml var={{ value }}
+    if s =~ /^\S+\{\{.*\}\}/
       $stderr.puts "WARNING: skipping dynamic include '#{s}' " +
                    "from #{type} '#{origin}' " +
                    "since expressions are not supported yet."
