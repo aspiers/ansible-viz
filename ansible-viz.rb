@@ -100,16 +100,38 @@ def get_options()
   options
 end
 
-def render(data, options)
-  debug 1, "Postprocessing ..."
+def divider(section)
+  debug 2, "=" * (ENV['COLUMNS'] ? ENV['COLUMNS'].to_i : 78)
+  debug 1, section + " ..."
+  debug 2, ""
+end
+
+def main
+  options = get_options()
+
+  divider "Loading"
+  data = Loader.new.load_dir(options.playbook_dir)
+
+  divider "Postprocessing"
   Postprocessor.new(options).process(data)
-  debug 1, "Resolving ..."
+
+  divider "Resolving"
   Resolver.new.process(data)
-  debug 1, "Finding variables ..."
+
+  divider "Finding variables"
   VarFinder.new.process(data)
-  debug 1, "Scoping variables ..."
+
+  divider "Scoping variables"
   Scoper.new.process(data)
-  debug 1, "Graphing ..."
+
+  divider "Building graph"
+  graph = build_graph(data, options)
+
+  divider "Rendering graph"
+  write(graph, options.output_filename)
+end
+
+def build_graph(data, options)
   grapher = Grapher.new
   g = grapher.graph(data, options)
   g[:rankdir] = 'LR'
@@ -141,12 +163,6 @@ def write(graph, filename)
   end
 end
 
-
-########## OPTIONS #############
-
 if __FILE__ == $0
-  options = get_options()
-
-  graph = render(Loader.new.load_dir(options.playbook_dir), options)
-  write(graph, options.output_filename)
+  main
 end
