@@ -130,7 +130,7 @@ class Scoper
     end
     order.each {|i| i.delete :loaded }
     debug 4, "Final order of #{type}s:\n" +
-             wrap_indent('   ', list.map { |item| item[:fqn] })
+             wrap_indent(' ' * 3, list.map { |item| item[:fqn] })
     order
   end
 
@@ -187,8 +187,9 @@ class Scoper
                    "guessing that it didn't have any tasks."
           nil
         else
-          debug 4, "   dependency '#{dep[:fqn]}' of role '#{role[:fqn]}' " +
-                   "has scope '#{dep[:scope].map {|i| i[:fqn]}}'"
+          debug 5, "   dependency '#{dep[:fqn]}' of role '#{role[:fqn]}' " +
+                   "has scope:\n" +
+                   wrap_indent(' ' * 6, dep[:scope].map {|i| i[:fqn]})
           dep[:scope]
         end
       }.compact
