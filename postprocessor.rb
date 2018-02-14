@@ -158,17 +158,20 @@ class Postprocessor
     task[:used_templates] = data.flat_map {|subtask|
       if subtask.include?("template")
         line = subtask["template"]
+        debug 4, "   Processing template line: #{line}"
         args = case line
                when Hash then line
                when String then parse_args(line)
                else raise "Bad type: #{line.class}"
                end
+        debug 5, "      Args: #{args}"
         [args["src"].sub(/(.*)\..*/, '\1')]
       else []
       end
     }
     if task[:used_templates].length > 0
-      debug 6, task[:used_templates].pretty_inspect
+      debug 6, ' ' * 6 + "used_templates:\n" +
+               wrap_indent(' ' * 9, task[:used_templates])
     end
   end
 end
