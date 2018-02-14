@@ -100,7 +100,7 @@ class Styler
       case type
       when :var
         if data[:used].nil?
-          $stderr.puts "WARNING: var #{node.data[:fqn]} missing :used"
+          debug 1, "WARNING: var #{node.data[:fqn]} missing :used"
         end
         if ! data[:used] || data[:used].length == 0
           style(node, :var_unused)

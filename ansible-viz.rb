@@ -27,6 +27,12 @@ def debug(level, msg)
   $stderr.puts msg if $debug_level >= level
 end
 
+def wrap_indent(indent, list)
+  list.join(" ") \
+    .wrap(tty_width - indent.size) \
+    .gsub(/^/, indent)
+end
+
 def get_options()
   options = OpenStruct.new
   options.format = :hot

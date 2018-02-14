@@ -77,12 +77,6 @@ class Scoper
     }
   end
 
-  def wrap_indent(indent, list)
-    list.join(" ") \
-      .wrap(tty_width - indent.size) \
-      .gsub(/^/, indent)
-  end
-
   # Take a list of roles or tasks, and return another list of the same
   # items topologically sorted so that dependencies come before the
   # items which depend on them.
