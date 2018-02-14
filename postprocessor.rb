@@ -166,6 +166,7 @@ class Postprocessor
                end
         debug 5, "      Args: #{args}"
         [args["src"].sub(/(.*)\..*/, '\1')]
+        [args["src"].sub(/\.j2$/, '')]
       else []
       end
     }

@@ -186,15 +186,21 @@ class Resolver
   end
 
   def resolve_templates(dict, task)
-    task[:used_templates].map! {|file|
-      debug 4, "Finding template '#{file}' used in #{task[:fqn]}"
-      if file =~ %r!\{\{.*\}\}!
+    task[:used_templates].map! {|template|
+      debug 4, "Finding template '#{template}' used in #{task[:fqn]}"
+      if template =~ %r!\{\{.*\}\}!
         thing(task[:parent], :template,
               "dynamic template src in " + task[:fqn],
-              task[:path],
-              {:src => file, :data => {}})
+              task[:path], src: template, data: {})
       else
-        find_template(dict, task[:parent], file)
+        find_template(dict, task[:parent], template) or
+          begin
+            debug 1, "WARNING: Couldn't find template '#{template}' " \
+                     "(included by task '#{task[:fqn]}')"
+            thing(task[:parent], :template, template,
+                  "unknown", unresolved: true,
+                  src: template, data: {})
+          end
       end
     }
     if task[:used_templates].length > 0
