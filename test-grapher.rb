@@ -15,8 +15,7 @@ class TC_Grapher < Test::Unit::TestCase
   end
 
   def test_full
-    options = OpenStruct.new
-    options.show_vars = true
+    options = default_options
     options.playbook_dir = "/path/to/playbook"
     @g = render(Loader.new.load_dir("sample"), options)
     assert_not_nil @g

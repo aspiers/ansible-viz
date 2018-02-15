@@ -9,7 +9,7 @@ TASK_KEYS = :data, :parent, :included_tasks, :included_varfiles, :var, :args, :i
 class TC_PostprocessorA < Test::Unit::TestCase
   def setup
     @d = Loader.new.load_dir("sample")
-    Postprocessor.new.process(@d)
+    Postprocessor.new(default_options).process(@d)
     @roleA = @d[:role].find {|r| r[:name] == 'roleA' }
     @main = @roleA[:task].find {|t| t[:name] == 'main' }
     @taskA = @roleA[:task].find {|t| t[:name] == 'taskA' }
@@ -68,7 +68,7 @@ end
 class TC_Postprocessor1 < Test::Unit::TestCase
   def setup
     @d = Loader.new.load_dir("sample")
-    Postprocessor.new.process(@d)
+    Postprocessor.new(default_options).process(@d)
     @roleA = @d[:role].find {|r| r[:name] == 'roleA' }
     @role1 = @d[:role].find {|r| r[:name] == 'role1' }
     @main = @role1[:task].find {|t| t[:name] == 'main' }

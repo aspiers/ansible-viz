@@ -15,7 +15,7 @@ class TC_Scoper < Test::Unit::TestCase
     @d = Loader.new.load_dir("sample")
     @role1 = @d[:role].find {|r| r[:name] == "role1" }
     @roleA = @d[:role].find {|r| r[:name] == "roleA" }
-    Postprocessor.new.process(@d)
+    Postprocessor.new(default_options).process(@d)
     Resolver.new.process(@d)
     VarFinder.new.process(@d)
     @s = Scoper.new
