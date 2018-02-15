@@ -1,0 +1,10 @@
+language: ruby
+sudo: false
+rvm: 2.2
+
+matrix:
+  include:
+    - script: bundle exec rspec
+      env: RSPEC
+    - script: bundle exec ruby test-viz.rb
+      env: MINITEST
