@@ -125,7 +125,13 @@ def main
 
   divider "Loading"
   data = Loader.new.load_dir(options.playbook_dir)
+  graph = graph_from_data(data, options)
 
+  divider "Rendering graph"
+  write(graph, options.output_filename)
+end
+
+def graph_from_data(data, options)
   divider "Postprocessing"
   Postprocessor.new(options).process(data)
 
@@ -139,10 +145,7 @@ def main
   Scoper.new.process(data)
 
   divider "Building graph"
-  graph = build_graph(data, options)
-
-  divider "Rendering graph"
-  write(graph, options.output_filename)
+  build_graph(data, options)
 end
 
 def build_graph(data, options)

@@ -17,7 +17,7 @@ class TC_Grapher < Test::Unit::TestCase
   def test_full
     options = default_options
     options.playbook_dir = "/path/to/playbook"
-    @g = render(Loader.new.load_dir("sample"), options)
+    @g = graph_from_data(Loader.new.load_dir("sample"), options)
     assert_not_nil @g
     w
   end
