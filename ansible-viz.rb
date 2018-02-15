@@ -33,17 +33,21 @@ def wrap_indent(indent, list)
     .gsub(/^/, indent)
 end
 
+def default_options
+  OpenStruct.new(
+    format: :hot,
+    output_filename: "viz.html",
+    show_tasks: true,
+    show_varfiles: true,
+    show_templates: true,
+    show_vars: false,
+    show_vardefaults: true,
+    show_usage: true,
+  )
+end
+
 def get_options()
-  options = OpenStruct.new
-  options.format = :hot
-  options.output_filename = "viz.html"
-  options.show_tasks = true
-  options.show_varfiles = true
-  options.show_templates = true
-  options.show_vars = false
-  options.show_vardefaults = true
-  options.show_varfiles = true
-  options.show_usage = true
+  options = default_options
 
   OptionParser.new do |o|
     o.banner = "Usage: ansible-viz.rb [options] <path-to-playbooks>"
