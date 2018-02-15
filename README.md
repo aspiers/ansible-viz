@@ -17,7 +17,7 @@ There are probably still a few bugs, particularly around var usage tracking.
 See [`sample/README.txt`](sample/README.txt) for details on test
 data. Run
 
-    bundle exec ruby test-viz.rb
+    bundle exec rake test
 
 to execute tests and generate a coverage report. The tests create a
 graph of the sample data in `test.html`.

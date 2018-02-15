@@ -2,6 +2,7 @@ source 'https://rubygems.org'
 
 gem 'mustache', '0.99.4'
 gem 'word_wrap'
+gem 'rake'
 
 group :test do
   gem 'pry'
