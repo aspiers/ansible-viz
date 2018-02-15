@@ -1,10 +1,20 @@
 language: ruby
 sudo: false
-rvm: 2.2
+rvm:
+  - 2.2.9
+  - 2.3.5
+  - 2.4.2
+  - 2.5.0
+env:
+  - TEST_TASK=spec
+  - TEST_TASK=minitest
 
-matrix:
-  include:
-    - script: bundle exec rspec
-      env: RSPEC
-    - script: bundle exec ruby test-viz.rb
-      env: MINITEST
+script: |
+  bundle exec rake $TEST_TASK
+#  bundle exec codeclimate-test-reporter
+
+cache: bundler
+
+#addons:
+#  code_climate:
+#    repo_token: ...
