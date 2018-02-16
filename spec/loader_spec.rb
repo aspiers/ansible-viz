@@ -1,3 +1,7 @@
+# This seems to be required for guard-rspec to work; presumably it
+# ignores .rspec in some rspec runs.
+require "spec_helper"
+
 require "ansible_viz/loader"
 
 RSpec.describe Loader do
