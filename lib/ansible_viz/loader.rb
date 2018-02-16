@@ -11,7 +11,7 @@ require 'pp'
 require 'ansible_viz/utils'
 
 def thing(parent, type, name, path, extra = {})
-  human_path = path.sub /^#{ENV['HOME']}/, '~'
+  human_path = path.sub(/^#{ENV['HOME']}/, '~')
   debug 2, "Loading new #{type} '#{name}' from #{human_path}, parent '#{parent[:name]}'"
   it = {:type => type, :name => name, :fqn => name, :path => path}.merge(extra)
   if parent[:type] != nil
