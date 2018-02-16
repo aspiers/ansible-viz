@@ -32,9 +32,10 @@ end
 require 'minitest/autorun'
 require 'minitest/reporters'
 Minitest::Reporters.use! [Minitest::Reporters::ProgressReporter.new(:color => true)]
-require './test/loader'
-require './test/postprocessor'
-require './test/resolver'
-require './test/varfinder'
-require './test/scoper'
-require './test/grapher'
+
+require_relative 'test/loader'
+require_relative 'test/postprocessor'
+require_relative 'test/resolver'
+require_relative 'test/varfinder'
+require_relative 'test/scoper'
+require_relative 'test/grapher'
