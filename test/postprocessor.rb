@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 
 require 'minitest/autorun'
-require './ansible-viz'
+require 'ansible_viz/postprocessor'
 
 ROLE_KEYS = :role_deps, :task, :main_task, :varfile, :vardefaults, :template
 TASK_KEYS = :data, :parent, :included_tasks, :included_varfiles, :var, :args, :included_by_tasks, :used_templates

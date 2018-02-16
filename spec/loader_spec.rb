@@ -1,4 +1,4 @@
-require_relative "../loader"
+require "ansible_viz/loader"
 
 RSpec.describe Loader do
   it "test thing" do

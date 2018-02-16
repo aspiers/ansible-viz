@@ -3,7 +3,8 @@
 require 'minitest/autorun'
 require 'ostruct'
 
-require './ansible-viz'
+require 'ansible_viz/grapher'
+require 'ansible_viz/cli'
 
 class TC_Grapher < Minitest::Test
   def setup

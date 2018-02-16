@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 
 require 'minitest/autorun'
-require './ansible-viz'
+require 'ansible_viz/resolver'
 
 
 class TC_ResolverA < Minitest::Test

@@ -4,10 +4,10 @@
 require 'minitest/autorun'
 require 'ostruct'
 
-require './loader'
-require './postprocessor'
-require './varfinder'
-require './scoper'
+require "ansible_viz/loader"
+require "ansible_viz/postprocessor"
+require "ansible_viz/varfinder"
+require "ansible_viz/scoper"
 
 
 class TC_Scoper < Minitest::Test

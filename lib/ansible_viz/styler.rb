@@ -2,7 +2,7 @@
 # vim: set ts=2 sw=2 tw=100:
 
 require 'rubygems'
-require './graphviz'
+require 'ansible_viz/graphviz'
 require 'pp'
 
 

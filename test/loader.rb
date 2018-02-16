@@ -2,7 +2,7 @@
 
 require 'minitest'
 require 'minitest/autorun'
-require './ansible-viz'
+require 'ansible_viz/loader'
 
 class TC_Loader < Minitest::Test
   def test_thing
