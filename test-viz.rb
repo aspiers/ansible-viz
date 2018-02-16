@@ -33,6 +33,9 @@ require 'minitest/autorun'
 require 'minitest/reporters'
 Minitest::Reporters.use! [Minitest::Reporters::ProgressReporter.new(:color => true)]
 
+require 'ansible_viz/utils'
+$debug_level = 0
+
 require_relative 'test/loader'
 require_relative 'test/postprocessor'
 require_relative 'test/resolver'
