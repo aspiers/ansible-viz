@@ -39,11 +39,11 @@ class TC_Grapher < Minitest::Test
     task = thing(role, :task, "ttt", "taskpath")
     thing(task, :var, "fff", "fff/varpath")  # fact
     varfile = thing(role, :varfile, "sss", "sss/varpath")
-    var = thing(varfile, :var, "vvv", "vvv/varpath")
+    thing(varfile, :var, "vvv", "vvv/varpath")
     role[:vardefaults] = []
     role[:template] = []
-    playbook = thing(d, :playbook, "ppp", "playbookpath",
-                     {:role => [role], :task => [task]})
+    thing(d, :playbook, "ppp", "playbookpath",
+          {:role => [role], :task => [task]})
 
     styler = Styler.new
     Grapher.new.add_nodes(@g, d, styler, true)
