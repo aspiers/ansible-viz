@@ -4,9 +4,11 @@
 require 'minitest/autorun'
 require 'ostruct'
 
+require 'test_helper'
 require 'ansible_viz/loader'
 require 'ansible_viz/postprocessor'
 require 'ansible_viz/scoper'
+require 'ansible_viz/varfinder'
 
 
 class TC_FindVars < Minitest::Test

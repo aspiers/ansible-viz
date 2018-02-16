@@ -1,5 +1,11 @@
 #!/usr/bin/ruby
-# vim: set ts=2 sw=2 tw=100:
+
+require 'minitest/reporters'
+Minitest::Reporters.use! [Minitest::Reporters::ProgressReporter.new(:color => true)]
+require 'minitest/autorun'
+
+require 'ansible_viz/utils'
+$debug_level = 0
 
 def assert_has_all(e, a, m="")
   if m != ""
@@ -28,17 +34,3 @@ require 'simplecov'
 SimpleCov.start do
   add_filter "/test"
 end
-
-require 'minitest/autorun'
-require 'minitest/reporters'
-Minitest::Reporters.use! [Minitest::Reporters::ProgressReporter.new(:color => true)]
-
-require 'ansible_viz/utils'
-$debug_level = 0
-
-require_relative 'test/loader'
-require_relative 'test/postprocessor'
-require_relative 'test/resolver'
-require_relative 'test/varfinder'
-require_relative 'test/scoper'
-require_relative 'test/grapher'

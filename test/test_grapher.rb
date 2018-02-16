@@ -3,6 +3,7 @@
 require 'minitest/autorun'
 require 'ostruct'
 
+require 'test_helper'
 require 'ansible_viz/grapher'
 require 'ansible_viz/cli'
 
