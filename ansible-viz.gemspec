@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "minitest-reporters"
   s.add_development_dependency "simplecov"
 
+  s.bindir = "bin"
   s.files        = %w(README.md LICENSE)
   s.files       += %w(diagram.mustache viz.js)
   s.files       += Dir["*.rb"]
