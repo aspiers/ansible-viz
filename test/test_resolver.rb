@@ -2,7 +2,7 @@
 
 require 'minitest/autorun'
 
-require 'test_helper'
+require_relative 'test_helper'
 require 'ansible_viz/resolver'
 
 class TC_ResolverA < Minitest::Test

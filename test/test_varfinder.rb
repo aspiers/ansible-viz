@@ -4,7 +4,7 @@
 require 'minitest/autorun'
 require 'ostruct'
 
-require 'test_helper'
+require_relative 'test_helper'
 require 'ansible_viz/loader'
 require 'ansible_viz/postprocessor'
 require 'ansible_viz/scoper'
