@@ -15,14 +15,14 @@ Gem::Specification.new do |s|
     components within Ansible playbooks, using Graphviz.
   DESC
 
-  s.add_dependency 'rake'
-  s.add_dependency 'mustache', '~> 0.99.4'
-  s.add_dependency 'word_wrap'
-  s.add_development_dependency 'pry'
-  s.add_development_dependency 'rspec', '~> 3.7'
-  s.add_development_dependency 'minitest', '~> 5.0'
-  s.add_development_dependency 'minitest-reporters'
-  s.add_development_dependency 'simplecov'
+  s.add_dependency "rake"
+  s.add_dependency "mustache", "~> 0.99.4"
+  s.add_dependency "word_wrap"
+  s.add_development_dependency "pry"
+  s.add_development_dependency "rspec", "~> 3.7"
+  s.add_development_dependency "minitest", "~> 5.0"
+  s.add_development_dependency "minitest-reporters"
+  s.add_development_dependency "simplecov"
 
   s.files        = %w(README.md LICENSE)
   s.files       += %w(diagram.mustache viz.js)
