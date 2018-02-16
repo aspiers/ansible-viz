@@ -124,7 +124,7 @@ class Scoper
     end
     order.each {|i| i.delete :loaded }
     debug 4, "Final order of #{type}s:\n" +
-             wrap_indent(' ' * 3, list.map { |item| item[:fqn] })
+             wrap_indent(' ' * 3, list.map { |i| i[:fqn] })
     order
   end
 

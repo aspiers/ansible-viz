@@ -1,9 +1,8 @@
 #!/usr/bin/ruby
 # vim: set ts=2 sw=2 tw=100:
 
-require 'rubygems'
-require './graphviz'
-require './styler'
+require 'ansible_viz/graphviz'
+require 'ansible_viz/styler'
 require 'pp'
 
 

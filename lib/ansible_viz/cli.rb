@@ -11,40 +11,15 @@ require 'optparse'
 require 'ostruct'
 require 'pp'
 
-require './graphviz'
-require './loader'
-require './postprocessor'
-require './resolver'
-require './varfinder'
-require './scoper'
-require './grapher'
-require './legend'
-
-# FIXME: evil evil global, get rid of this!
-$debug_level = 1
-
-def debug(level, msg)
-  $stderr.puts msg if $debug_level >= level
-end
-
-def wrap_indent(indent, list)
-  list.join(" ") \
-    .wrap(tty_width - indent.size) \
-    .gsub(/^/, indent)
-end
-
-def default_options
-  OpenStruct.new(
-    format: :hot,
-    output_filename: "viz.html",
-    show_tasks: true,
-    show_varfiles: true,
-    show_templates: true,
-    show_vars: false,
-    show_vardefaults: true,
-    show_usage: true,
-  )
-end
+require 'ansible_viz/graphviz'
+require 'ansible_viz/loader'
+require 'ansible_viz/postprocessor'
+require 'ansible_viz/resolver'
+require 'ansible_viz/varfinder'
+require 'ansible_viz/scoper'
+require 'ansible_viz/grapher'
+require 'ansible_viz/legend'
+require 'ansible_viz/utils'
 
 def get_options()
   options = default_options
@@ -110,25 +85,10 @@ def get_options()
   options
 end
 
-def tty_width
-  ENV['COLUMNS'] ? ENV['COLUMNS'].to_i : 78
-end
-
 def divider(section)
   debug 2, "=" * tty_width
   debug 1, section + " ..."
   debug 2, ""
-end
-
-def main
-  options = get_options()
-
-  divider "Loading"
-  data = Loader.new.load_dir(options.playbook_dir)
-  graph = graph_from_data(data, options)
-
-  divider "Rendering graph"
-  write(graph, options.output_filename)
 end
 
 def graph_from_data(data, options)
@@ -178,8 +138,4 @@ def write(graph, filename)
   File.open(path, 'w') do |f|
     f.puts view.render
   end
-end
-
-if __FILE__ == $0
-  main
 end

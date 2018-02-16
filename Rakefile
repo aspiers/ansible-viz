@@ -1,13 +1,17 @@
 require 'bundler/gem_tasks'
+require "rake/testtask"
+require 'rspec/core/rake_task'
 
 $LOAD_PATH.unshift File.dirname(__FILE__)
 
-require 'rspec/core/rake_task'
-RSpec::Core::RakeTask.new(:spec)
 task default: :test
-
 task test: [:minitest, :spec]
 
-task :minitest do
-  require 'test-viz'
+RSpec::Core::RakeTask.new(:spec)
+
+desc "Run minitest tests"
+Rake::TestTask.new do |t|
+  t.name = :minitest
+  t.test_files = FileList['test/**/test_*.rb']
+  t.verbose = false
 end

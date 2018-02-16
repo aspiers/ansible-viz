@@ -9,7 +9,7 @@ Run:
 
     gem install bundler
     bundle install
-    bundle exec ruby ansible-viz.rb <path-to-playbook-dir>
+    bundle exec ruby bin/ansible-viz.rb <path-to-playbook-dir>
 
 Now browse `viz.html` or `with-vars.html`. The diagram is drawn
 client-side with [`viz.js`](https://github.com/mdaines/viz.js/).

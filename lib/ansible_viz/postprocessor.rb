@@ -60,7 +60,7 @@ class Postprocessor
   #
   #   ["foo.yml", { "param1" => "bar1", "param2" => "bar2" }]
   def parse_include(s, type, origin)
-    s.gsub! /\{\{\s*playbook_dir\s*\}\}\//, ''
+    s.gsub!(/\{\{\s*playbook_dir\s*\}\}\//, '')
 
     # We want to skip lines like:
     #
