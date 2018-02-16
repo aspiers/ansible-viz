@@ -20,8 +20,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'word_wrap'
   s.add_development_dependency 'pry'
   s.add_development_dependency 'rspec', '~> 3.7'
-  s.add_development_dependency 'minitest'
-  s.add_development_dependency 'test-unit-minitest'
+  s.add_development_dependency 'minitest', '~> 5.0'
   s.add_development_dependency 'simplecov'
 
   s.files        = %w(README.md LICENSE)

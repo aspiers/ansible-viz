@@ -1,9 +1,10 @@
 #!/usr/bin/ruby
 
-require 'test/unit'
+require 'minitest'
+require 'minitest/autorun'
 require './ansible-viz'
 
-class TC_Loader < Test::Unit::TestCase
+class TC_Loader < Minitest::Test
   def test_thing
     d = {}
 

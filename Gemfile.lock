@@ -14,7 +14,7 @@ GEM
     docile (1.1.5)
     json (2.1.0)
     method_source (0.9.0)
-    minitest (4.7.5)
+    minitest (5.11.3)
     mustache (0.99.8)
     pry (0.11.3)
       coderay (~> 1.1.0)
@@ -38,8 +38,6 @@ GEM
       json (>= 1.8, < 3)
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.2)
-    test-unit-minitest (0.9.1)
-      minitest (~> 4.7)
     word_wrap (1.0.0)
 
 PLATFORMS
@@ -47,11 +45,10 @@ PLATFORMS
 
 DEPENDENCIES
   ansible-viz!
-  minitest
+  minitest (~> 5.0)
   pry
   rspec (~> 3.7)
   simplecov
-  test-unit-minitest
 
 BUNDLED WITH
    1.16.1

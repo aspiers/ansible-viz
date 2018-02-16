@@ -1,10 +1,10 @@
 #!/usr/bin/ruby
 
-require 'test/unit'
+require 'minitest/autorun'
 require './ansible-viz'
 
 
-class TC_ResolverA < Test::Unit::TestCase
+class TC_ResolverA < Minitest::Test
   def setup
     skip
     @d = {}
@@ -22,7 +22,7 @@ class TC_ResolverA < Test::Unit::TestCase
 end
 
 
-class TC_Resolver1 < Test::Unit::TestCase
+class TC_Resolver1 < Minitest::Test
   def setup
     skip
     @d = {}

@@ -1,11 +1,11 @@
 #!/usr/bin/ruby
 
-require 'test/unit'
+require 'minitest/autorun'
 require 'ostruct'
 
 require './ansible-viz'
 
-class TC_Grapher < Test::Unit::TestCase
+class TC_Grapher < Minitest::Test
   def setup
     @g = Graph.new
   end
@@ -18,7 +18,7 @@ class TC_Grapher < Test::Unit::TestCase
     options = default_options
     options.playbook_dir = "/path/to/playbook"
     @g = graph_from_data(Loader.new.load_dir("sample"), options)
-    assert_not_nil @g
+    assert ! @g.nil?
     w
   end
 

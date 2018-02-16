@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 # vim: set ts=2 sw=2 tw=100:
 
-require 'test/unit'
+require 'minitest/autorun'
 require 'ostruct'
 
 require './loader'
@@ -10,7 +10,7 @@ require './varfinder'
 require './scoper'
 
 
-class TC_Scoper < Test::Unit::TestCase
+class TC_Scoper < Minitest::Test
   def setup
     @d = Loader.new.load_dir("sample")
     @role1 = @d[:role].find {|r| r[:name] == "role1" }
