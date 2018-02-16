@@ -101,5 +101,5 @@ RSpec.configure do |config|
 =end
 end
 
-# stub the debug function, we dont want to write to std during tests
-def debug(level, msg) end
+# disable debug; we don't want to write to std during tests
+$debug_level = 0
