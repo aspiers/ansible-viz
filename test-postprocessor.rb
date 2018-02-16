@@ -1,12 +1,12 @@
 #!/usr/bin/ruby
 
-require 'test/unit'
+require 'minitest/autorun'
 require './ansible-viz'
 
 ROLE_KEYS = :role_deps, :task, :main_task, :varfile, :vardefaults, :template
 TASK_KEYS = :data, :parent, :included_tasks, :included_varfiles, :var, :args, :included_by_tasks, :used_templates
 
-class TC_PostprocessorA < Test::Unit::TestCase
+class TC_PostprocessorA < Minitest::Test
   def setup
     @d = Loader.new.load_dir("sample")
     Postprocessor.new(default_options).process(@d)
@@ -65,7 +65,7 @@ class TC_PostprocessorA < Test::Unit::TestCase
 end
 
 
-class TC_Postprocessor1 < Test::Unit::TestCase
+class TC_Postprocessor1 < Minitest::Test
   def setup
     @d = Loader.new.load_dir("sample")
     Postprocessor.new(default_options).process(@d)

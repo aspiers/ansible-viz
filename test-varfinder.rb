@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 # vim: set ts=2 sw=2 tw=100:
 
-require 'test/unit'
+require 'minitest/autorun'
 require 'ostruct'
 
 require './loader'
@@ -9,7 +9,7 @@ require './postprocessor'
 require './scoper'
 
 
-class TC_FindVars < Test::Unit::TestCase
+class TC_FindVars < Minitest::Test
   def try(expect, input)
     role = thing({}, :role, "role", "rolepath")
     task = thing(role, :task, "task1", "taskpath")
@@ -50,7 +50,7 @@ class TC_FindVars < Test::Unit::TestCase
 end
 
 
-class TC_VarFinder < Test::Unit::TestCase
+class TC_VarFinder < Minitest::Test
   def setup
     @d = Loader.new.load_dir("sample")
     @role1 = @d[:role].find {|r| r[:name] == "role1" }

@@ -32,7 +32,9 @@ SimpleCov.start do
   add_filter "/test"
 end
 
-require 'test/unit'
+require 'minitest/autorun'
+require 'minitest/reporters'
+Minitest::Reporters.use! [Minitest::Reporters::ProgressReporter.new(:color => true)]
 require './test-loader'
 require './test-postprocessor'
 require './test-resolver'
