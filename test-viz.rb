@@ -1,9 +1,6 @@
 #!/usr/bin/ruby
 # vim: set ts=2 sw=2 tw=100:
 
-require 'rubygems'
-require 'bundler/setup'
-
 def assert_has_all(e, a, m="")
   if m != ""
     m += ": "
