@@ -8,5 +8,6 @@ group :test do
   gem 'simplecov', :require => false
   gem 'minitest'
   gem 'test-unit-minitest'
+  gem 'rspec', '~> 3.7'
 end
 
