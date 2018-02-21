@@ -171,7 +171,8 @@ class Resolver
       end
     }
     if task[:included_varfiles].include?(nil)
-      raise "Task #{task[:fqn]} has nil varfiles"
+      raise "Task #{task[:fqn]}'s included varfiles includes a nil: " +
+            task[:included_varfiles].inspect
     end
   end
 
