@@ -52,10 +52,11 @@ class Resolver
   def find_on_role(dict, role, type, name)
     if !role.is_a?(Hash)
       # Role name supplied; find the corresponding role Hash.
-      role = find_role_by_name(dict, role)
+      role_name = role
+      role = find_role_by_name(dict, role_name)
       unless role
         raise "find_on_role called to find #{type} named '#{name}' on " \
-              "non-existent role '#{role}'"
+              "non-existent role '#{role_name}'"
       end
     end
     debug 4, "      Find #{type} '#{name}' in role '#{role[:name]}'"
