@@ -111,7 +111,8 @@ class Postprocessor
         path, args = parse_include(task_hash['include'],
                                    "playbook", playbook[:fqn])
         if path !~ %r!roles/([^/]+)/tasks/([^/]+)\.yml!
-          raise "Bad include from playbook #{playbook[:name]}: #{path}"
+          debug 2, "Couldn't parses include from playbook #{playbook[:name]}: #{path}"
+          next nil
         end
         rolename, taskname = $1, $2
         role = dict[:role].find {|r| r[:name] == rolename }
