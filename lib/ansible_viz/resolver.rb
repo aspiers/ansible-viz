@@ -153,11 +153,13 @@ class Resolver
                 task[:path],
                 {:include => name, :var => []})
         elsif name =~ %r!^([^/]+).yml! or name =~ %r!^\.\./vars/([^/]+).yml!
-          find_on_role(dict, task[:parent], :varfile, $1)
+          find_on_role(dict, task[:parent], :varfile, $1) or
+            mk_unresolved_varfile(dict, $1)
         elsif name =~ %r!^\.\./defaults/([^/]+).yml!
           find_on_role(dict, task[:parent], :vardefaults, $1)
         elsif name =~ %r!^\.\./\.\./([^/]+)/vars/([^/]+).yml!
-          find_on_role(dict, $1, :varfile, $2)
+          find_on_role(dict, $1, :varfile, $2) or
+            mk_unresolved_varfile(dict, $1)
         elsif name =~ %r!^(?:\.\./\.\./|roles/)([^/]+)/defaults/([^/]+).yml!
           find_on_role(dict, $1, :vardefaults, $2)
         else
@@ -171,6 +173,10 @@ class Resolver
     if task[:included_varfiles].include?(nil)
       raise "Task #{task[:fqn]} has nil varfiles"
     end
+  end
+
+  def mk_unresolved_varfile(dict, name)
+    thing(dict, :varfile, name, "unknown", unresolved: true, var: [])
   end
 
   def resolve_args(dict, task)
