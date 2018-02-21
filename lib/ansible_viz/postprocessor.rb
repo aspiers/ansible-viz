@@ -133,6 +133,7 @@ class Postprocessor
   end
 
   def process_task(dict, task)
+    debug 3, "process_task(#{task[:fqn]})"
     data = task[:data]
 
     task[:args] = []
@@ -145,6 +146,7 @@ class Postprocessor
     task[:included_varfiles] = data.find_all {|i|
       i.is_a? Hash and i['include_vars']
     }.map {|i| i['include_vars'] }
+    debug 5, "   included_varfiles: #{task[:included_varfiles].inspect}"
 
     # A fact is created by set_fact in a task. A fact defines a var for every
     # task which includes this task. Facts defined by the main task of a role
