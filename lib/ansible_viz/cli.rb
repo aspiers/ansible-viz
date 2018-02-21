@@ -138,4 +138,5 @@ def write(graph, filename)
   File.open(path, 'w') do |f|
     f.puts view.render
   end
+  puts "Wrote #{path}"
 end
