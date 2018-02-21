@@ -45,6 +45,7 @@ class Grapher
         exclude = descriptor =~ options.exclude_nodes
         if exclude
           debug 3, "Excluding node #{descriptor}"
+          debug 4, "   matched #{options.exclude_nodes}"
         end
         exclude
       }
@@ -60,6 +61,7 @@ class Grapher
         exclude = descriptor =~ options.exclude_edges
         if exclude
           debug 3, "Excluding edge #{descriptor}"
+          debug 4, "   matched #{options.exclude_edges}"
         end
         exclude
       }
