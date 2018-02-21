@@ -43,8 +43,13 @@ class Resolver
     }
   end
 
-  def find_role_by_name(dict, rolename)
-    dict[:role].find {|r| r[:name] == rolename }
+  def find_role_by_name(dict, rolename, context)
+    role = dict[:role].find {|r| r[:name] == rolename }
+    unless role
+      debug 1, "WARNING: Couldn't find role '#{rolename or 'nil'}' " + context
+      role = mk_unresolved_role(dict, rolename)
+    end
+    role
   end
 
   # Finds something of the given type and name within the given role.
@@ -53,11 +58,8 @@ class Resolver
     if !role.is_a?(Hash)
       # Role name supplied; find the corresponding role Hash.
       role_name = role
-      role = find_role_by_name(dict, role_name)
-      unless role
-        raise "find_on_role called to find #{type} named '#{name}' on " \
-              "non-existent role '#{role_name}'"
-      end
+      role = find_role_by_name(dict, role_name,
+                              "while finding #{type} named '#{name}' on it")
     end
     debug 4, "      Find #{type} '#{name}' in role '#{role[:name]}'"
     role[type].find {|t| t[:name] == name }
@@ -78,12 +80,8 @@ class Resolver
     if task_name =~ %r!^(?:roles/|\.\./\.\./(?:\.\./roles/)?)([^/]+)/tasks/([^/]+)$!
       role_name, task_name = $1, $2
       debug 4, "      finding role '#{role_name}' elsewhere in '#{task_name}'"
-      role = find_role_by_name(dict, role_name)
-      unless role
-        debug 1, "WARNING: Couldn't find containing role '#{role_name}' " \
-                 "while looking for task '#{name}'"
-        role = mk_unresolved_role(dict, role_name)
-      end
+      role = find_role_by_name(dict, role_name,
+                               "while looking for task '#{name}'")
     end
 
     task = find_on_role(dict, role, :task, task_name)
@@ -96,7 +94,8 @@ class Resolver
       role_name, template_name = $1, $2
       debug 4, "      Finding template '#{template_name}' " +
                "elsewhere in '#{role_name}'"
-      role = find_role_by_name(dict, role_name)
+      role = find_role_by_name(dict, role_name,
+                              "while looking for template '#{template_name}'")
       name = template_name
     end
     find_on_role(dict, role, :template, name)
@@ -114,13 +113,7 @@ class Resolver
         next "dynamic dependency of #{role[:name]}"
       end
 
-      dep = find_role_by_name(dict, depname)
-      unless dep
-        debug 1, "WARNING: Couldn't find role '#{depname or 'nil'}' " \
-                 "(dependency of role '#{role[:fqn]}')"
-        dep = mk_unresolved_role(dict, depname)
-      end
-      dep
+      find_role_by_name(dict, depname, "(dependency of role '#{role[:fqn]}')")
     }
     if role[:role_deps].any?(&:nil?)
       raise "nil role dep for #{role[:fqn]}"
