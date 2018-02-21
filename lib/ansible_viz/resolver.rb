@@ -156,12 +156,14 @@ class Resolver
           find_on_role(dict, task[:parent], :varfile, $1) or
             mk_unresolved_varfile(dict, $1)
         elsif name =~ %r!^\.\./defaults/([^/]+).yml!
-          find_on_role(dict, task[:parent], :vardefaults, $1)
+          find_on_role(dict, task[:parent], :vardefaults, $1) or
+            mk_unresolved_vardefaults(dict, $1)
         elsif name =~ %r!^\.\./\.\./([^/]+)/vars/([^/]+).yml!
           find_on_role(dict, $1, :varfile, $2) or
             mk_unresolved_varfile(dict, $1)
         elsif name =~ %r!^(?:\.\./\.\./|roles/)([^/]+)/defaults/([^/]+).yml!
-          find_on_role(dict, $1, :vardefaults, $2)
+          find_on_role(dict, $1, :vardefaults, $2) or
+            mk_unresolved_vardefaults(dict, $1)
         else
           raise "Unhandled include_vars: #{name}"
         end
@@ -178,6 +180,10 @@ class Resolver
 
   def mk_unresolved_varfile(dict, name)
     thing(dict, :varfile, name, "unknown", unresolved: true, var: [])
+  end
+
+  def mk_unresolved_vardefaults(dict, name)
+    thing(dict, :vardefaults, name, "unknown", unresolved: true, var: [])
   end
 
   def resolve_args(dict, task)
