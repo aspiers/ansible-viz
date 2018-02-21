@@ -99,8 +99,8 @@ class Postprocessor
                       role_or_name['role'] : role_or_name
         role = dict[:role].find {|r| r[:name] == role_name }
         unless role
-          $stderr.puts "WARNING: Couldn't find role '#{role_name}' "\
-                       "(invoked by playbook '#{playbook[:name]}')"
+          debug 1, "WARNING: Couldn't find role '#{role_name}' "\
+                   "(invoked by playbook '#{playbook[:name]}')"
         end
         role
       }.compact
@@ -116,9 +116,9 @@ class Postprocessor
         rolename, taskname = $1, $2
         role = dict[:role].find {|r| r[:name] == rolename }
         unless role
-          $stderr.puts "WARNING: Couldn't find role '#{rolename}' " \
-                       "(referenced by task '#{taskname}' included by " \
-                       "playbook '#{playbook[:fqn]}')"
+          debug 1, "WARNING: Couldn't find role '#{rolename}' " \
+                   "(referenced by task '#{taskname}' included by " \
+                   "playbook '#{playbook[:fqn]}')"
           next nil
         end
         debug 4, "   found task's role #{role[:fqn]}"
