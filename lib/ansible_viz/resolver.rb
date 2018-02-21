@@ -158,7 +158,7 @@ class Resolver
         elsif name =~ %r!^\.\./defaults/([^/]+).yml!
           find_on_role(dict, task[:parent], :vardefaults, $1) or
             mk_unresolved_vardefaults(dict, $1)
-        elsif name =~ %r!^\.\./\.\./([^/]+)/vars/([^/]+).yml!
+        elsif name =~ %r!^(?:\.\./\.\./|roles/)([^/]+)/vars/([^/]+).yml!
           find_on_role(dict, $1, :varfile, $2) or
             mk_unresolved_varfile(dict, $1)
         elsif name =~ %r!^(?:\.\./\.\./|roles/)([^/]+)/defaults/([^/]+).yml!
