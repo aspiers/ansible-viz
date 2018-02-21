@@ -149,7 +149,7 @@ class Resolver
       begin
         if name =~ %r!\{\{.+\}\}!
           thing(task, :varfile,
-                "dynamic include_vars in " + task[:fqn],
+                "\"#{name}\" in " + task[:fqn],
                 task[:path],
                 {:include => name, :var => []})
         elsif name =~ %r!^([^/]+).yml! or name =~ %r!^\.\./vars/([^/]+).yml!
