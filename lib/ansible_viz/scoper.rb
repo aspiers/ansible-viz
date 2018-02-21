@@ -146,11 +146,12 @@ class Scoper
     }
   end
 
-  def raise_if_nil(context, name, it)
+  def raise_if_task_component_nil(task_name, component_name, it)
     if it.nil?
-      raise "in #{context}, #{name} is nil"
+      raise "in task '#{task_name}', '#{component_name}' is nil"
     elsif it.include? nil
-      raise "in #{context}, #{name} #{it.class} includes nil"
+      raise "in task '#{task_name}', " \
+            "'#{component_name}' #{it.class} includes nil: #{it}"
     end
   end
 
@@ -162,10 +163,10 @@ class Scoper
     if role[:scope].nil?
       debug 4, "   no scope for #{role[:fqn]} yet"
       main_vf = role[:varfile].find {|vf| vf[:name] == 'main' } || {:var => []}
-      raise_if_nil(task[:fqn], "main_vf", main_vf)
+      raise_if_task_component_nil(task[:fqn], "main_vf", main_vf)
 
       defaults = role[:vardefaults].flat_map {|vf| vf[:var] }
-      raise_if_nil(task[:fqn], "defaults", defaults)
+      raise_if_task_component_nil(task[:fqn], "defaults", defaults)
 
       # role[:scope] should really only be set after the main task has
       # been handled.  main can include other tasks though, so to
@@ -187,7 +188,7 @@ class Scoper
           dep[:scope]
         end
       }.compact
-      raise_if_nil(task[:fqn], "dependency scope", dep_vars)
+      raise_if_task_component_nil(task[:fqn], "dependency scope", dep_vars)
       role[:scope] = main_vf[:var] + defaults + dep_vars
     end
 
@@ -202,7 +203,7 @@ class Scoper
       :role_scope => role[:scope],
       :facts => task[:var]
     }
-    task[:debug].each {|k,v| raise_if_nil(task[:fqn], k, v) }
+    task[:debug].each {|k,v| raise_if_task_component_nil(task[:fqn], k, v) }
     task[:scope] = task[:debug].values.inject {|a,i| a + i }
     if task == role[:main_task]
       # update the role[:scope] so it has the full picture
