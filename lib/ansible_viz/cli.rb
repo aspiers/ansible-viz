@@ -77,10 +77,10 @@ def get_options()
     end
   end.parse!
 
-  if ARGV.length != 1
-    abort("Must provide the path to your playbooks")
+  if ARGV.length == 0
+    abort("Must provide the path(s) to your playbooks")
   end
-  options.playbook_dir = ARGV.shift
+  options.playbook_dirs = ARGV
 
   options
 end

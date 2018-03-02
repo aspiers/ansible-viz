@@ -5,8 +5,11 @@ require "ansible_viz/cli"
 def main
   options = get_options()
 
-  divider "Loading"
-  data = Loader.new.load_dir(options.playbook_dir)
+  options.playbook_dirs.each do |playbook_dir|
+    divider "Loading #{playbook_dir}"
+    data = Loader.new.load_dir(options.playbook_dir)
+  end
+
   graph = graph_from_data(data, options)
 
   divider "Rendering graph"
