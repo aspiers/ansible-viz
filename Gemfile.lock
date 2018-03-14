@@ -2,9 +2,6 @@ PATH
   remote: .
   specs:
     ansible-viz (0.1.0)
-      guard
-      guard-minitest
-      guard-rspec
       mustache (~> 0.99.4)
       rake
       word_wrap
@@ -90,6 +87,9 @@ PLATFORMS
 
 DEPENDENCIES
   ansible-viz!
+  guard
+  guard-minitest
+  guard-rspec
   minitest (~> 5.0)
   minitest-reporters
   pry
