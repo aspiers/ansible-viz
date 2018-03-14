@@ -2,9 +2,6 @@ PATH
   remote: .
   specs:
     ansible-viz (0.1.0)
-      guard
-      guard-minitest
-      guard-rspec
       mustache (~> 0.99.4)
       rake
       word_wrap
@@ -37,6 +34,8 @@ GEM
       guard-compat (~> 1.1)
       rspec (>= 2.99.0, < 4.0)
     json (2.1.0)
+    libnotify (0.9.4)
+      ffi (>= 1.0.11)
     listen (3.1.5)
       rb-fsevent (~> 0.9, >= 0.9.4)
       rb-inotify (~> 0.9, >= 0.9.7)
@@ -90,6 +89,10 @@ PLATFORMS
 
 DEPENDENCIES
   ansible-viz!
+  guard
+  guard-minitest
+  guard-rspec
+  libnotify
   minitest (~> 5.0)
   minitest-reporters
   pry

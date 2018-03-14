@@ -23,9 +23,10 @@ Gem::Specification.new do |s|
   s.add_development_dependency "minitest", "~> 5.0"
   s.add_development_dependency "minitest-reporters"
   s.add_development_dependency "simplecov"
-  s.add_dependency "guard"
-  s.add_dependency "guard-rspec"
-  s.add_dependency "guard-minitest"
+  s.add_development_dependency "guard"
+  s.add_development_dependency "guard-rspec"
+  s.add_development_dependency "guard-minitest"
+  s.add_development_dependency "libnotify"
 
   s.bindir = "bin"
   s.files        = %w(README.md LICENSE)
